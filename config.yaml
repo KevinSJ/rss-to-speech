@@ -1,0 +1,7 @@
+ItemSince: 72.0
+Feeds:
+  #- https://rsshub.app/theinitium/channel/latest/zh-hans
+  - https://chinadigitaltimes.net/chinese/category/404%e6%96%87%e5%ba%93/feed
+  #- https://agora0.gitlab.io/blog/feed.xml
+ConcurrentWorkers: 5
+CredentialPath: ./credential.json

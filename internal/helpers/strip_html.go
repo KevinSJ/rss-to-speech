@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bytes"
 	"strings"
 	"unicode/utf8"
 )
@@ -9,6 +10,33 @@ const (
 	htmlTagStart = 60 // Unicode `<`
 	htmlTagEnd   = 62 // Unicode `>`
 )
+
+func ChunksByte(s string, chunkSize int) []string {
+	if len(s) == 0 {
+		return nil
+	}
+	if chunkSize >= len(s) {
+		return []string{s}
+	}
+	currentLen := 0
+	currentStart := 0
+
+	byteString := []byte(s)
+	totalByte := bytes.Count(byteString, byteString)
+	var chunks []string = make([]string, 0, (totalByte-1)/chunkSize+1)
+
+	for i := range byteString {
+		if currentLen >= chunkSize-3 && currentLen <= chunkSize && utf8.ValidString(string(byteString[currentStart:i])) {
+			chunks = append(chunks, string(byteString[currentStart:i]))
+			currentLen = 0
+			currentStart = i
+		}
+		currentLen++
+	}
+	chunks = append(chunks, s[currentStart:])
+
+	return chunks
+}
 
 func Chunks(s string, chunkSize int) []string {
 	if len(s) == 0 {
