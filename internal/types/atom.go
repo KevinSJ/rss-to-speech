@@ -31,7 +31,7 @@ import (
 	texttospeechpb "google.golang.org/genproto/googleapis/cloud/texttospeech/v1"
 )
 
-//Create directory based on feed updated date
+// Create directory based on feed updated date
 func CreateDirectory(f gofeed.Feed) (*string, error) {
 	directory := f.Title + " " + f.UpdatedParsed.Format("2006-01-02")
 
@@ -43,12 +43,18 @@ func CreateDirectory(f gofeed.Feed) (*string, error) {
 }
 
 func GetSynthesizeSpeechRequests(e *gofeed.Item) []*texttospeechpb.SynthesizeSpeechRequest {
-	text := e.Title + "\n\n" + helpers.StripHtmlTags(e.Content)
-	splitedText := helpers.Chunks(text, 4800)
+	text := e.Title + "\n\n"
+	if len(e.Content) > 0 {
+		text += helpers.StripHtmlTags(e.Content)
+	} else if len(e.Description) > 0 {
+		text += helpers.StripHtmlTags(e.Description)
+	}
+	splitedText := helpers.ChunksByte(text, 5000)
 
 	synthesizeRequest := make([]*texttospeechpb.SynthesizeSpeechRequest, 0)
 
 	for _, v := range splitedText {
+
 		req := texttospeechpb.SynthesizeSpeechRequest{
 			// Set the text input to be synthesized.
 			Input: &texttospeechpb.SynthesisInput{
