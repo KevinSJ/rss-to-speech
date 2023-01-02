@@ -25,76 +25,121 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
+	"github.com/kevinsj/rss-to-podcast/internal/helpers"
 	"github.com/kevinsj/rss-to-podcast/internal/types"
 	"github.com/mmcdole/gofeed"
 	"golang.org/x/sync/errgroup"
 )
 
-const FEED_URL = "https://agora0.gitlab.io/blog/feed.xml"
-//const FEED_URL = "https://chinadigitaltimes.net/chinese/category/404%e6%96%87%e5%ba%93/feed"
+var FEEDS = [...]string{
+	//"https://chinadigitaltimes.net/chinese/category/404%e6%96%87%e5%ba%93/feed",
+	//"https://agora0.gitlab.io/blog/feed.xml",
+	//"https://chinadigitaltimes.net/chinese/category/404%e6%96%87%e5%ba%93/feed",
+	//"https://chinadigitaltimes.net/chinese/category/%e2%96%a3%e7%89%88%e9%9d%a2%e4%b8%8e%e9%82%ae%e4%bb%b6/level-2-article/feed",
+	"https://rsshub.app/theinitium/channel/latest/zh-hans",
+}
+
+const CONCURRENT_WORKER = 5
 
 func main() {
 
+	configPath, _ := filepath.Abs("./config.yaml")
+
+	config, err := helpers.ParseConfig(configPath)
+	if err != nil {
+		log.Fatalf("Unable to parse config file, error: %v", err)
+	}
+
+	credentialAbsPath, _ := filepath.Abs(config.CredentialPath)
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", credentialAbsPath)
+
 	fp := gofeed.NewParser()
-	feed, err := fp.ParseURL(FEED_URL)
-	if err != nil {
-		log.Printf("Error GET: %v\n", err)
-		log.Panic(err)
-	}
 
-	g := new(errgroup.Group)
+	for _, v := range config.Feeds {
+		log.Printf("v: %v\n", v)
+		feed, err := fp.ParseURL(v)
 
-	//create folder based on RSS update date, this will be used to store all
-	//generated mp3s.
-	directory, err := types.CreateDirectory(*feed)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := os.Chdir(*directory); err != nil {
-		panic(err)
-	}
-
-	allEntries := feed.Items
-
-	ctx := context.Background()
-
-	client, err := texttospeech.NewClient(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Close()
-
-	for _, v := range allEntries {
-		if time.Since(*v.PublishedParsed).Hours() <= 72.0 {
-			fmt.Printf("e.Title: %v\n", v.Title)
-			fmt.Printf("e.Published: %v\n", v.Published)
-
-			v := v
-
-			g.Go(func() error {
-				if err := synthesizeSpeech(v, client, ctx); err != nil {
-					return err
-				}
-				return nil
-			})
+		if err != nil {
+			log.Fatalf("Error GET: %v\n", err)
 		}
-	}
-	if err := g.Wait(); err != nil {
-		log.Fatal(err.Error())
+		//create folder based on RSS update date, this will be used to store all
+		//generated mp3s.
+		directory, err := types.CreateDirectory(*feed)
+		if err != nil {
+			panic(err)
+		}
+
+		if err := os.Chdir(*directory); err != nil {
+			panic(err)
+		}
+
+		g := new(errgroup.Group)
+
+		ctx := context.Background()
+
+		client, err := texttospeech.NewClient(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer client.Close()
+
+		// ignore error
+		createSpeechFromItems(feed, g, client, ctx, config.ItemSince)
+
+		if err := g.Wait(); err != nil {
+			log.Fatal(err.Error())
+		}
 	}
 }
 
-//This code is taken from sample google TTS code with some modification
-//Source: https://cloud.google.com/text-to-speech/docs/libraries
+func collectFeedItems(feed *gofeed.Feed, g *errgroup.Group, client *texttospeech.Client, ctx context.Context, itemSince float64) {
+	for _, _item := range feed.Items {
+		if time.Since(*_item.PublishedParsed).Hours() <= itemSince {
+			log.Printf("e.Title: %v\n", _item.Title)
+			log.Printf("e.Published: %v\n", _item.Published)
+
+			item := _item
+
+			g.Go(func() error {
+				if err := synthesizeSpeech(item, client, ctx); err != nil {
+					return nil
+				} else {
+					return err
+				}
+			})
+		}
+	}
+}
+
+func createSpeechFromItems(feed *gofeed.Feed, g *errgroup.Group, client *texttospeech.Client, ctx context.Context, itemSince float64) {
+	for _, _item := range feed.Items {
+		if time.Since(*_item.PublishedParsed).Hours() <= itemSince {
+			log.Printf("e.Title: %v\n", _item.Title)
+			log.Printf("e.Published: %v\n", _item.Published)
+
+			item := _item
+
+			g.Go(func() error {
+				if err := synthesizeSpeech(item, client, ctx); err != nil {
+					return nil
+				} else {
+					return err
+				}
+			})
+		}
+	}
+}
+
+// This code is taken from sample google TTS code with some modification
+// Source: https://cloud.google.com/text-to-speech/docs/libraries
 func synthesizeSpeech(e *gofeed.Item, client *texttospeech.Client, ctx context.Context) error {
 	log.Printf("Processing... %s", e.Title)
 	audioContent := make([]byte, 0)
