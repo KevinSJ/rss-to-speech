@@ -4,6 +4,7 @@ package helpers
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
@@ -13,6 +14,7 @@ type Config struct {
 	ItemSince         float64  `yaml:"ItemSince"`
 	ConcurrentWorkers int      `yaml:"ConcurrentWorkers"`
 	CredentialPath    string   `yaml:"CredentialPath"`
+	MaxItemPerFeed    int      `yaml:"MaxItemPerFeed"`
 }
 
 var DEFAULT_CONFIG = &Config{
@@ -23,21 +25,19 @@ var DEFAULT_CONFIG = &Config{
 	ConcurrentWorkers: 5,
 }
 
-func ParseConfig(fileName string) (*Config, error) {
-	log.Printf("%v", fileName)
-
+func InitConfig(fileName string) (*Config, error) {
 	if data, err := os.ReadFile(fileName); data != nil {
-		log.Printf("%v", &data)
 		t := Config{}
 
 		if err := yaml.Unmarshal([]byte(data), &t); err != nil {
 			log.Fatalf("error: %v", err)
 			return nil, err
 		}
-		log.Printf("--- t:\n%v\n\n", t)
+
+		t.CredentialPath, _ = filepath.Abs(t.CredentialPath)
 		return &t, nil
 	} else {
-		log.Fatalf("error: %v", err)
+		log.Fatalf("fail to read config file: %v", err)
 		return nil, err
 	}
 }
