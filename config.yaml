@@ -1,0 +1,17 @@
+ItemSince: 24.0
+Feeds:
+  - https://rsshub.app/theinitium/channel/latest/zh-hans
+  - https://chinadigitaltimes.net/chinese/feed
+  #- https://chinadigitaltimes.net/chinese/category/404%e6%96%87%e5%ba%93/feed
+  - https://agora0.gitlab.io/blog/feed.xml
+  #- https://rsshub.app/uber/blog
+  #- https://rsshub.app/bbc/business
+  #- https://feeds.bbci.co.uk/news/business/rss.xml
+  #- https://www.solidot.org/index.rss
+  #- https://agora0.gitlab.io/news/feed.xml
+  #- https://rsshub.app/infzm/2
+  - http://rss.slashdot.org/Slashdot/slashdotMainatom
+  - https://api.axios.com/feed/
+MaxItemPerFeed: 5
+ConcurrentWorkers: 20
+CredentialPath: ./credential.json
