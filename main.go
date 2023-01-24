@@ -25,143 +25,162 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
 	"github.com/kevinsj/rss-to-podcast/internal/helpers"
 	"github.com/kevinsj/rss-to-podcast/internal/types"
 	"github.com/mmcdole/gofeed"
+	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
 
-var FEEDS = [...]string{
-	//"https://chinadigitaltimes.net/chinese/category/404%e6%96%87%e5%ba%93/feed",
-	//"https://agora0.gitlab.io/blog/feed.xml",
-	//"https://chinadigitaltimes.net/chinese/category/404%e6%96%87%e5%ba%93/feed",
-	//"https://chinadigitaltimes.net/chinese/category/%e2%96%a3%e7%89%88%e9%9d%a2%e4%b8%8e%e9%82%ae%e4%bb%b6/level-2-article/feed",
-	"https://rsshub.app/theinitium/channel/latest/zh-hans",
+type WorkerRequest struct {
+	// Item for this request
+	Item *gofeed.Item
+
+	// Directory to which the file wil write to
+	Directory string
+
+	// Language of the item
+	LanguageCode string
 }
 
-const CONCURRENT_WORKER = 5
-
 func main() {
-
 	configPath, _ := filepath.Abs("./config.yaml")
 
-	config, err := helpers.ParseConfig(configPath)
+	config, err := helpers.InitConfig(configPath)
 	if err != nil {
 		log.Fatalf("Unable to parse config file, error: %v", err)
 	}
 
-	credentialAbsPath, _ := filepath.Abs(config.CredentialPath)
-	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", credentialAbsPath)
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", config.CredentialPath)
 
 	fp := gofeed.NewParser()
+	g := new(errgroup.Group)
+	ctx := context.Background()
 
-	for _, v := range config.Feeds {
-		log.Printf("v: %v\n", v)
-		feed, err := fp.ParseURL(v)
-
-		if err != nil {
-			log.Fatalf("Error GET: %v\n", err)
-		}
-		//create folder based on RSS update date, this will be used to store all
-		//generated mp3s.
-		directory, err := types.CreateDirectory(*feed)
-		if err != nil {
-			panic(err)
-		}
-
-		if err := os.Chdir(*directory); err != nil {
-			panic(err)
-		}
-
-		g := new(errgroup.Group)
-
-		ctx := context.Background()
-
-		client, err := texttospeech.NewClient(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer client.Close()
-
-		// ignore error
-		createSpeechFromItems(feed, g, client, ctx, config.ItemSince)
-
-		if err := g.Wait(); err != nil {
-			log.Fatal(err.Error())
-		}
+	client, err := texttospeech.NewClient(ctx)
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer client.Close()
+
+	work := make(chan *WorkerRequest)
+
+	var wg sync.WaitGroup
+	for i := 0; i < config.ConcurrentWorkers; i++ {
+		wg.Add(1)
+		go speechSynthesizeWorker(&wg, client, &work, ctx)
+	}
+
+	for _, _v := range config.Feeds {
+		v := _v
+		g.Go(func() error {
+			log.Printf("v: %v\n", v)
+			feed, err := fp.ParseURL(v)
+
+			if err != nil {
+				log.Fatalf("Error GET: %v\n", err)
+			}
+
+			hasValidItems := slices.IndexFunc(feed.Items, func(item *gofeed.Item) bool {
+				return time.Since(item.PublishedParsed.Local()).Hours() <= config.ItemSince
+			})
+
+			if hasValidItems == -1 {
+				return nil
+			}
+
+			//create folder based on RSS update date, this will be used to store all
+			//generated mp3s.
+			dir, err := types.CreateDirectory(*feed)
+
+			if err != nil {
+				log.Panicf("error: %v", err)
+			}
+
+			createSpeechFromItems(*feed, config, &work, dir)
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		log.Fatal(err.Error())
+	}
+
+	close(work)
+	wg.Wait()
 }
 
-func collectFeedItems(feed *gofeed.Feed, g *errgroup.Group, client *texttospeech.Client, ctx context.Context, itemSince float64) {
-	for _, _item := range feed.Items {
-		if time.Since(*_item.PublishedParsed).Hours() <= itemSince {
-			log.Printf("e.Title: %v\n", _item.Title)
-			log.Printf("e.Published: %v\n", _item.Published)
+func createSpeechFromItems(feed gofeed.Feed, config *helpers.Config, work *chan *WorkerRequest, direcory *string) {
+	fmt.Printf("feed.Title: %v\n", feed.Title)
 
-			item := _item
-
-			g.Go(func() error {
-				if err := synthesizeSpeech(item, client, ctx); err != nil {
-					return nil
-				} else {
-					return err
-				}
-			})
+	itemSize := func(size int, limit int) int {
+		if size > limit {
+			return limit
 		}
+
+		return size
+	}(len(feed.Items), config.MaxItemPerFeed)
+
+	isInRange := func(itemPublishTime *time.Time) bool {
+		return time.Since((*itemPublishTime).Local()).Hours() <= config.ItemSince
 	}
-}
 
-func createSpeechFromItems(feed *gofeed.Feed, g *errgroup.Group, client *texttospeech.Client, ctx context.Context, itemSince float64) {
-	for _, _item := range feed.Items {
-		if time.Since(*_item.PublishedParsed).Hours() <= itemSince {
-			log.Printf("e.Title: %v\n", _item.Title)
-			log.Printf("e.Published: %v\n", _item.Published)
+	for _, item := range feed.Items[:itemSize] {
+		if isInRange(item.PublishedParsed) {
+			log.Printf("e.Title: %v\n", item.Title)
+			log.Printf("e.Published: %v\n", item.Published)
 
-			item := _item
-
-			g.Go(func() error {
-				if err := synthesizeSpeech(item, client, ctx); err != nil {
-					return nil
-				} else {
-					return err
-				}
-			})
+			*work <- &WorkerRequest{
+				Item:         item,
+				LanguageCode: feed.Language,
+				Directory:    *direcory,
+			}
 		}
 	}
 }
 
 // This code is taken from sample google TTS code with some modification
 // Source: https://cloud.google.com/text-to-speech/docs/libraries
-func synthesizeSpeech(e *gofeed.Item, client *texttospeech.Client, ctx context.Context) error {
-	log.Printf("Processing... %s", e.Title)
+func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, incomingItem *chan *WorkerRequest, ctx context.Context) error {
+	defer wg.Done()
 	audioContent := make([]byte, 0)
 
-	reqs := types.GetSynthesizeSpeechRequests(e)
+	for request := range *incomingItem {
+		reqs := types.GetSynthesizeSpeechRequests(request.Item, request.LanguageCode)
 
-	for _, ssr := range reqs {
-		resp, err := client.SynthesizeSpeech(ctx, ssr)
-		if err != nil {
+		for _, ssr := range reqs {
+			resp, err := client.SynthesizeSpeech(ctx, ssr)
+			if err != nil {
+				return err
+			}
+
+			audioContent = append(audioContent, resp.AudioContent...)
+		}
+
+		sanitizedTitle := strings.ReplaceAll(request.Item.Title, "/", "\\/")
+
+		filename := sanitizedTitle + ".mp3"
+
+		filepath, _ := filepath.Abs(request.Directory + "/" + filename)
+
+		fmt.Printf("filepath: %v\n", filepath)
+
+		if err := os.WriteFile(filepath, audioContent, 0644); err != nil {
+			fmt.Printf("err: %v\n", err)
 			return err
 		}
 
-		audioContent = append(audioContent, resp.AudioContent...)
+		log.Printf("Audio content written to file: %v\n", filename)
 	}
 
-	// The resp's AudioContent is binary.
-	filename := e.Title + ".mp3"
-	if err := ioutil.WriteFile(strings.ReplaceAll(filename, "/", "\\/"), audioContent, 0644); err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	log.Printf("Audio content written to file: %v\n", filename)
 	return nil
 }
