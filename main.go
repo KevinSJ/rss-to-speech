@@ -25,7 +25,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -120,7 +119,7 @@ func main() {
 }
 
 func createSpeechFromItems(feed gofeed.Feed, config *helpers.Config, work *chan *WorkerRequest, direcory *string) {
-	fmt.Printf("feed.Title: %v\n", feed.Title)
+	log.Printf("feed.Title: %v\n", feed.Title)
 
 	itemSize := func(size int, limit int) int {
 		if size > limit {
@@ -152,10 +151,13 @@ func createSpeechFromItems(feed gofeed.Feed, config *helpers.Config, work *chan 
 // Source: https://cloud.google.com/text-to-speech/docs/libraries
 func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, incomingItem *chan *WorkerRequest, ctx context.Context) error {
 	defer wg.Done()
-	audioContent := make([]byte, 0)
 
 	for request := range *incomingItem {
-		reqs := types.GetSynthesizeSpeechRequests(request.Item, request.LanguageCode)
+		item := request.Item
+		log.Printf("Start procesing %v ", item.Title)
+
+		reqs := types.GetSynthesizeSpeechRequests(item, request.LanguageCode)
+		audioContent := make([]byte, 0)
 
 		for _, ssr := range reqs {
 			resp, err := client.SynthesizeSpeech(ctx, ssr)
@@ -166,20 +168,20 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, inc
 			audioContent = append(audioContent, resp.AudioContent...)
 		}
 
-		sanitizedTitle := strings.ReplaceAll(request.Item.Title, "/", "\\/")
+		sanitizedTitle := strings.ReplaceAll(item.Title, "/", "\\/")
 
 		filename := sanitizedTitle + ".mp3"
 
 		filepath, _ := filepath.Abs(request.Directory + "/" + filename)
 
-		fmt.Printf("filepath: %v\n", filepath)
+		log.Printf("filepath: %v\n", filepath)
 
 		if err := os.WriteFile(filepath, audioContent, 0644); err != nil {
-			fmt.Printf("err: %v\n", err)
+			log.Printf("err: %v\n", err)
 			return err
 		}
 
-		log.Printf("Audio content written to file: %v\n", filename)
+		log.Printf("Finished Processing: %v, written to %v\n", item.Title, filename)
 	}
 
 	return nil
