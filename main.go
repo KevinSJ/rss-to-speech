@@ -33,7 +33,7 @@ import (
 	"time"
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
-	"github.com/kevinsj/rss-to-podcast/internal/helpers"
+	"github.com/kevinsj/rss-to-podcast/internal/config"
 	"github.com/kevinsj/rss-to-podcast/internal/types"
 	"github.com/mmcdole/gofeed"
 	"golang.org/x/exp/slices"
@@ -53,8 +53,7 @@ type WorkerRequest struct {
 
 func main() {
 	configPath, _ := filepath.Abs("./config.yaml")
-
-	config, err := helpers.InitConfig(configPath)
+	config, err := config.NewConfig(configPath)
 	if err != nil {
 		log.Fatalf("Unable to parse config file, error: %v", err)
 	}
@@ -71,7 +70,7 @@ func main() {
 	}
 	defer client.Close()
 
-	work := make(chan *WorkerRequest)
+	work := make(chan *WorkerRequest, config.MaxItemPerFeed*len(config.Feeds))
 
 	var wg sync.WaitGroup
 	for i := 0; i < config.ConcurrentWorkers; i++ {
@@ -84,7 +83,6 @@ func main() {
 		g.Go(func() error {
 			log.Printf("v: %v\n", v)
 			feed, err := fp.ParseURL(v)
-
 			if err != nil {
 				log.Fatalf("Error GET: %v\n", err)
 			}
@@ -97,10 +95,9 @@ func main() {
 				return nil
 			}
 
-			//create folder based on RSS update date, this will be used to store all
-			//generated mp3s.
+			// create folder based on RSS update date, this will be used to store all
+			// generated mp3s.
 			dir, err := types.CreateDirectory(*feed)
-
 			if err != nil {
 				log.Panicf("error: %v", err)
 			}
@@ -118,7 +115,7 @@ func main() {
 	wg.Wait()
 }
 
-func createSpeechFromItems(feed gofeed.Feed, config *helpers.Config, work *chan *WorkerRequest, direcory *string) {
+func createSpeechFromItems(feed gofeed.Feed, config *config.Config, work *chan *WorkerRequest, direcory *string) {
 	log.Printf("feed.Title: %v\n", feed.Title)
 
 	itemSize := func(size int, limit int) int {
@@ -162,6 +159,7 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, inc
 		for _, ssr := range reqs {
 			resp, err := client.SynthesizeSpeech(ctx, ssr)
 			if err != nil {
+				log.Printf("err: %v\n", err)
 				return err
 			}
 
@@ -174,14 +172,12 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, inc
 
 		filepath, _ := filepath.Abs(request.Directory + "/" + filename)
 
-		log.Printf("filepath: %v\n", filepath)
-
 		if err := os.WriteFile(filepath, audioContent, 0644); err != nil {
 			log.Printf("err: %v\n", err)
 			return err
 		}
 
-		log.Printf("Finished Processing: %v, written to %v\n", item.Title, filename)
+		log.Printf("Finished Processing: %v, written to %v\n", item.Title, filepath)
 	}
 
 	return nil
