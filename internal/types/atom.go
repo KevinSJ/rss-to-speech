@@ -23,15 +23,13 @@
 package types
 
 import (
+	"log"
 	"os"
-	"strings"
 
-	"github.com/kevinsj/rss-to-podcast/internal/helpers"
+	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
+	"github.com/kevinsj/rss-to-podcast/internal/helper"
 	"github.com/mmcdole/gofeed"
-
-	texttospeechpb "google.golang.org/genproto/googleapis/cloud/texttospeech/v1"
 )
-
 
 var VOICE_NAME_MAP_WAVENET = map[string]string{
 	"zh-CN": "cmn-CN-Wavenet-A",
@@ -45,7 +43,6 @@ var VOICE_NAME_MAP_STANDARD = map[string]string{
 
 // Create directory based on feed updated date
 func CreateDirectory(f gofeed.Feed) (dir *string, err error) {
-
 	updatedDate := f.UpdatedParsed
 
 	if updatedDate == nil {
@@ -54,32 +51,28 @@ func CreateDirectory(f gofeed.Feed) (dir *string, err error) {
 
 	directory := f.Title + "_" + updatedDate.Local().Format("2006-01-02")
 
-	if err := os.MkdirAll(directory, 0755); err != nil {
+	if err := os.MkdirAll(directory, 0o755); err != nil {
+		log.Printf("Failed to create directory")
 		return nil, err
 	}
-
 
 	return &directory, nil
 }
 
-func GetSynthesizeSpeechRequests(e *gofeed.Item, lang string) []*texttospeechpb.SynthesizeSpeechRequest {
+func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string) []*texttospeechpb.SynthesizeSpeechRequest {
 	if len(lang) == 0 {
 		lang = "zh-CN"
 	}
 
-	lang = func(s string) string {
-		s2 := strings.Split(s, "-")
+	lang = helper.GetSanitizedLangCode(lang)
 
-		return s2[0] + "-" + strings.ToUpper(s2[len(s2)-1])
-	}(lang)
-
-	feedContent := getFeedContent(e)
+	itemContent := helper.GetSanitizedContentChunks(item)
 
 	languageName := VOICE_NAME_MAP_STANDARD[lang]
 
 	synthesizeRequest := make([]*texttospeechpb.SynthesizeSpeechRequest, 0)
 
-	for _, v := range feedContent {
+	for _, v := range itemContent {
 
 		req := texttospeechpb.SynthesizeSpeechRequest{
 			// Set the text input to be synthesized.
@@ -101,16 +94,6 @@ func GetSynthesizeSpeechRequests(e *gofeed.Item, lang string) []*texttospeechpb.
 
 		synthesizeRequest = append(synthesizeRequest, &req)
 	}
-	return synthesizeRequest
-}
 
-func getFeedContent(e *gofeed.Item) []string {
-	text := e.Title + "\n\n"
-	if len(e.Content) > 0 {
-		text += helpers.StripHtmlTags(e.Content)
-	} else if len(e.Description) > 0 {
-		text += helpers.StripHtmlTags(e.Description)
-	}
-	splitedText := helpers.ChunksByte(text, 5000)
-	return splitedText
+	return synthesizeRequest
 }
