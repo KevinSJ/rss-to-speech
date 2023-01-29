@@ -1,0 +1,3 @@
+Feeds:
+  - https://jiangsc.me/feed.xml
+CredentialPath: ./some_file.json
