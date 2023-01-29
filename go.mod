@@ -1,4 +1,4 @@
-module github.com/kevinsj/rss-to-podcast
+module github.com/KevinSJ/rss-to-podcast
 
 go 1.19
 
