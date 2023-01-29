@@ -27,7 +27,7 @@ import (
 	"os"
 
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
-	"github.com/kevinsj/rss-to-podcast/internal/helper"
+	"github.com/KevinSJ/rss-to-podcast/internal/helper"
 	"github.com/mmcdole/gofeed"
 )
 

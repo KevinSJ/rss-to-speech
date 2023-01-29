@@ -33,8 +33,8 @@ import (
 	"time"
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
-	"github.com/kevinsj/rss-to-podcast/internal/config"
-	"github.com/kevinsj/rss-to-podcast/internal/types"
+	"github.com/KevinSJ/rss-to-podcast/internal/config"
+	"github.com/KevinSJ/rss-to-podcast/internal/types"
 	"github.com/mmcdole/gofeed"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
@@ -113,6 +113,7 @@ func main() {
 
 	close(work)
 	wg.Wait()
+	log.Printf("Done processing all feeds")
 }
 
 func createSpeechFromItems(feed gofeed.Feed, config *config.Config, work *chan *WorkerRequest, direcory *string) {
@@ -172,7 +173,7 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, inc
 
 		filepath, _ := filepath.Abs(request.Directory + "/" + filename)
 
-		if err := os.WriteFile(filepath, audioContent, 0644); err != nil {
+		if err := os.WriteFile(filepath, audioContent, 0o644); err != nil {
 			log.Printf("err: %v\n", err)
 			return err
 		}
