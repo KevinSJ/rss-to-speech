@@ -1,0 +1,8 @@
+ItemSince: 24.0
+Feeds:
+  #- http://example.com/rss/address
+# Whether to use natural google tts, this has lower limt than the other one.
+UseNaturalVoice: false
+MaxItemPerFeed: 20
+ConcurrentWorkers: 20
+CredentialPath: ./credential.json
