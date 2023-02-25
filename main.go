@@ -49,6 +49,9 @@ type WorkerRequest struct {
 
 	// Language of the item
 	LanguageCode string
+
+	// Whether to use natural Voice
+	UseNaturalVoice bool
 }
 
 func main() {
@@ -81,7 +84,7 @@ func main() {
 	for _, _v := range config.Feeds {
 		v := _v
 		g.Go(func() error {
-			log.Printf("v: %v\n", v)
+			log.Printf("feed: %v\n", v)
 			feed, err := fp.ParseURL(v)
 			if err != nil {
 				log.Fatalf("Error GET: %v\n", err)
@@ -113,6 +116,7 @@ func main() {
 
 	close(work)
 	wg.Wait()
+
 	log.Printf("Done processing all feeds")
 }
 
@@ -133,13 +137,11 @@ func createSpeechFromItems(feed gofeed.Feed, config *config.Config, work *chan *
 
 	for _, item := range feed.Items[:itemSize] {
 		if isInRange(item.PublishedParsed) {
-			log.Printf("e.Title: %v\n", item.Title)
-			log.Printf("e.Published: %v\n", item.Published)
-
 			*work <- &WorkerRequest{
-				Item:         item,
-				LanguageCode: feed.Language,
-				Directory:    *direcory,
+				Item:            item,
+				LanguageCode:    feed.Language,
+				Directory:       *direcory,
+				UseNaturalVoice: config.UseNaturalVoice,
 			}
 		}
 	}
@@ -154,7 +156,7 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, inc
 		item := request.Item
 		log.Printf("Start procesing %v ", item.Title)
 
-		reqs := types.GetSynthesizeSpeechRequests(item, request.LanguageCode)
+		reqs := types.GetSynthesizeSpeechRequests(item, request.LanguageCode, request.UseNaturalVoice)
 		audioContent := make([]byte, 0)
 
 		for _, ssr := range reqs {
