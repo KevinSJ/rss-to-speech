@@ -25,6 +25,7 @@ package types
 import (
 	"log"
 	"os"
+	"time"
 
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 	"github.com/KevinSJ/rss-to-podcast/internal/helper"
@@ -41,13 +42,22 @@ var VOICE_NAME_MAP_STANDARD = map[string]string{
 	"en-US": "en-US-Standard-C",
 }
 
+func getUpdatedDate(f gofeed.Feed) *time.Time {
+   if f.UpdatedParsed  != nil {
+        return f.UpdatedParsed
+   }
+   if f.PublishedParsed != nil {
+        return f.PublishedParsed
+   }
+   currentDate := time.Now()
+
+   return &currentDate
+ }
+
+
 // Create directory based on feed updated date
 func CreateDirectory(f gofeed.Feed) (dir *string, err error) {
-	updatedDate := f.UpdatedParsed
-
-	if updatedDate == nil {
-		updatedDate = f.PublishedParsed
-	}
+    updatedDate := getUpdatedDate(f)
 
 	directory := f.Title + "_" + updatedDate.Local().Format("2006-01-02")
 
@@ -59,7 +69,7 @@ func CreateDirectory(f gofeed.Feed) (dir *string, err error) {
 	return &directory, nil
 }
 
-func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string) []*texttospeechpb.SynthesizeSpeechRequest {
+func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, UseNaturalVoice bool) []*texttospeechpb.SynthesizeSpeechRequest {
 	if len(lang) == 0 {
 		lang = "zh-CN"
 	}
@@ -69,6 +79,9 @@ func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string) []*texttospeech
 	itemContent := helper.GetSanitizedContentChunks(item)
 
 	languageName := VOICE_NAME_MAP_STANDARD[lang]
+	if UseNaturalVoice {
+		languageName = VOICE_NAME_MAP_WAVENET[lang]
+	}
 
 	synthesizeRequest := make([]*texttospeechpb.SynthesizeSpeechRequest, 0)
 
@@ -89,6 +102,7 @@ func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string) []*texttospeech
 			// Select the type of audio file you want returned.
 			AudioConfig: &texttospeechpb.AudioConfig{
 				AudioEncoding: texttospeechpb.AudioEncoding_MP3,
+				SpeakingRate:  1.25,
 			},
 		}
 
