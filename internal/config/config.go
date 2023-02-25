@@ -20,8 +20,8 @@ type Config struct {
 	// MaxItemPerFeed is the max number of item per feed after applying the time
 	// filter
 	MaxItemPerFeed int `yaml:"MaxItemPerFeed"`
-    // Whether to use natural voice from Google, this only have quota of 1
-    // Million, whereas the quota for standard voice is 3 Million
+	// Whether to use natural voice from Google, this only have quota of 1
+	// Million, whereas the quota for standard voice is 3 Million
 	UseNaturalVoice bool `yaml:"UseNaturalVoice"`
 }
 

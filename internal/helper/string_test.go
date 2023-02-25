@@ -52,7 +52,7 @@ func Test_chunksByte(t *testing.T) {
 				// each chinese char uses 3 byte
 				chunkSize: 3,
 			},
-			want: []string{"世",",","界"},
+			want: []string{"世", ",", "界"},
 		},
 		{
 			name: "should create chunked string (zh-CN)",

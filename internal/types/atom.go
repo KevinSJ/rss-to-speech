@@ -43,21 +43,20 @@ var VOICE_NAME_MAP_STANDARD = map[string]string{
 }
 
 func getUpdatedDate(f gofeed.Feed) *time.Time {
-   if f.UpdatedParsed  != nil {
-        return f.UpdatedParsed
-   }
-   if f.PublishedParsed != nil {
-        return f.PublishedParsed
-   }
-   currentDate := time.Now()
+	if f.UpdatedParsed != nil {
+		return f.UpdatedParsed
+	}
+	if f.PublishedParsed != nil {
+		return f.PublishedParsed
+	}
+	currentDate := time.Now()
 
-   return &currentDate
- }
-
+	return &currentDate
+}
 
 // Create directory based on feed updated date
 func CreateDirectory(f gofeed.Feed) (dir *string, err error) {
-    updatedDate := getUpdatedDate(f)
+	updatedDate := getUpdatedDate(f)
 
 	directory := f.Title + "_" + updatedDate.Local().Format("2006-01-02")
 
