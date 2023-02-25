@@ -48,6 +48,15 @@ func Test_chunksByte(t *testing.T) {
 		{
 			name: "should create chunked string (zh-CN)",
 			args: args{
+				s: "世,界",
+				// each chinese char uses 3 byte
+				chunkSize: 3,
+			},
+			want: []string{"世",",","界"},
+		},
+		{
+			name: "should create chunked string (zh-CN)",
+			args: args{
 				s: "世界,",
 				// each chinese char uses 3 byte
 				chunkSize: 4,
