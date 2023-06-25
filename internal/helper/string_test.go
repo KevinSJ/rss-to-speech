@@ -104,7 +104,7 @@ func TestGuessLanguageCode(t *testing.T) {
 			args: args{s: "你好，世界"},
 			want: "zh-CN",
 		},
-        {
+		{
 			name: "return Chinese language code for Tranditional Chinese",
 			args: args{s: "妳好，臥愛你"},
 			want: "zh-CN",
@@ -127,7 +127,7 @@ func TestGuessLanguageCode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GuessLanguageByUnicode(tt.args.s); got != tt.want {
+			if got := guessLanguageByUnicode(tt.args.s); got != tt.want {
 				t.Errorf("GetSanitizedLangCode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -151,7 +151,7 @@ func TestGetSanitizedLangCode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetSanitizedLanguageCode(tt.args.s); got != tt.want {
+			if got := getSanitizedLanguageCode(tt.args.s); got != tt.want {
 				t.Errorf("GetSanitizedLangCode() = %v, want %v", got, tt.want)
 			}
 		})

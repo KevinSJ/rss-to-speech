@@ -15,7 +15,7 @@ var CHINESE_UNICODE_RANGE = []*unicode.RangeTable{
 }
 
 // Guess the language code for a string by looking at the unicode
-func GuessLanguageByUnicode(title string) string {
+func guessLanguageByUnicode(title string) string {
 	for _, c := range title {
 		if unicode.In(c, CHINESE_UNICODE_RANGE...) {
 			return "zh-CN"
@@ -24,7 +24,7 @@ func GuessLanguageByUnicode(title string) string {
 	return "en-US"
 }
 
-func GetSanitizedLanguageCode(s string) string {
+func getSanitizedLanguageCode(s string) string {
 	s2 := strings.Split(s, "-")
 
 	return s2[0] + "-" + strings.ToUpper(s2[len(s2)-1])

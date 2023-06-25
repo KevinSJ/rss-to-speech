@@ -33,10 +33,10 @@ func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, UseNaturalVoice
 	itemContent := getSanitizedContentChunks(item)
 
 	if len(lang) == 0 {
-		lang = GuessLanguageByUnicode(item.Title)
+		lang = guessLanguageByUnicode(item.Title)
 	}
 
-	lang = GetSanitizedLanguageCode(lang)
+	lang = getSanitizedLanguageCode(lang)
 
 	languageName := VOICE_NAME_MAP_STANDARD[lang]
 	if UseNaturalVoice {
