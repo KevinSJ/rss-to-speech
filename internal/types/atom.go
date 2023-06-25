@@ -1,5 +1,5 @@
 /*
-*rss-to-tts A progrm to read rss articles to tts mp3s
+*rss-to-tts A program to read rss articles to tts mp3s
 *Copyright © 2022 Kevin Jiang
 *
 *Permission is hereby granted, free of charge, to any person obtaining
@@ -69,13 +69,13 @@ func CreateDirectory(f gofeed.Feed) (dir *string, err error) {
 }
 
 func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, UseNaturalVoice bool) []*texttospeechpb.SynthesizeSpeechRequest {
+	itemContent := helper.GetSanitizedContentChunks(item)
+
 	if len(lang) == 0 {
-		lang = "zh-CN"
+		lang = helper.GuessLanguageByUnicode(item.Title)
 	}
 
-	lang = helper.GetSanitizedLangCode(lang)
-
-	itemContent := helper.GetSanitizedContentChunks(item)
+	lang = helper.GetSanitizedLanguageCode(lang)
 
 	languageName := VOICE_NAME_MAP_STANDARD[lang]
 	if UseNaturalVoice {
@@ -110,3 +110,5 @@ func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, UseNaturalVoice
 
 	return synthesizeRequest
 }
+
+
