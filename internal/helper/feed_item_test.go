@@ -46,7 +46,7 @@ func TestGetSanitizedContent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotTextchunks := GetSanitizedContentChunks(tt.args.item); !reflect.DeepEqual(gotTextchunks, tt.wantTextchunks) {
+			if gotTextchunks := getSanitizedContentChunks(tt.args.item); !reflect.DeepEqual(gotTextchunks, tt.wantTextchunks) {
 				t.Errorf("GetSanitizedContent() = %v, want %v", gotTextchunks, tt.wantTextchunks)
 			}
 		})
