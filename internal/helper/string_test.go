@@ -90,6 +90,50 @@ func Test_chunksByte(t *testing.T) {
 	}
 }
 
+func TestGuessLanguageCode(t *testing.T) {
+	type args struct {
+		s string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "return Chinese language code for Simplified Chinese",
+			args: args{s: "你好，世界"},
+			want: "zh-CN",
+		},
+        {
+			name: "return Chinese language code for Tranditional Chinese",
+			args: args{s: "妳好，臥愛你"},
+			want: "zh-CN",
+		},
+		{
+			name: "return Chinese language code for mixed letter and Chinese",
+			args: args{s: "abcdefg AS $,你好，世界"},
+			want: "zh-CN",
+		},
+		{
+			name: "return Chinese language code for mixed letter and Chinese",
+			args: args{s: "1234,你好，世界"},
+			want: "zh-CN",
+		},
+		{
+			name: "return English language code for English only",
+			args: args{s: "Hello world"},
+			want: "en-US",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GuessLanguageByUnicode(tt.args.s); got != tt.want {
+				t.Errorf("GetSanitizedLangCode() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetSanitizedLangCode(t *testing.T) {
 	type args struct {
 		s string
@@ -107,7 +151,7 @@ func TestGetSanitizedLangCode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetSanitizedLangCode(tt.args.s); got != tt.want {
+			if got := GetSanitizedLanguageCode(tt.args.s); got != tt.want {
 				t.Errorf("GetSanitizedLangCode() = %v, want %v", got, tt.want)
 			}
 		})

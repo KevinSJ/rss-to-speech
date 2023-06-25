@@ -1,5 +1,5 @@
 /*
-*rss-to-tts A progrm to read rss articles to tts mp3s
+*rss-to-tts A program to read rss articles to tts mp3s
 *Copyright © 2022 Kevin Jiang
 *
 *Permission is hereby granted, free of charge, to any person obtaining
@@ -149,17 +149,22 @@ func createSpeechFromItems(feed gofeed.Feed, config *config.Config, work *chan *
 
 // This code is taken from sample google TTS code with some modification
 // Source: https://cloud.google.com/text-to-speech/docs/libraries
-func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, incomingItem *chan *WorkerRequest, ctx context.Context) error {
+func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, incomingItems *chan *WorkerRequest, ctx context.Context) error {
 	defer wg.Done()
 
-	for request := range *incomingItem {
-		item := request.Item
+	for incomingItem := range *incomingItems {
+		item := incomingItem.Item
+
+		sanitizedTitle := strings.ReplaceAll(item.Title, "/", "\\/")
+		filename := sanitizedTitle + ".mp3"
+		filepath, _ := filepath.Abs(incomingItem.Directory + "/" + filename)
+
 		log.Printf("Start procesing %v ", item.Title)
 
-		reqs := types.GetSynthesizeSpeechRequests(item, request.LanguageCode, request.UseNaturalVoice)
+		speechRequests := types.GetSynthesizeSpeechRequests(item, incomingItem.LanguageCode, incomingItem.UseNaturalVoice)
 		audioContent := make([]byte, 0)
 
-		for _, ssr := range reqs {
+		for _, ssr := range speechRequests {
 			resp, err := client.SynthesizeSpeech(ctx, ssr)
 			if err != nil {
 				log.Printf("err: %v\n", err)
@@ -168,12 +173,6 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, inc
 
 			audioContent = append(audioContent, resp.AudioContent...)
 		}
-
-		sanitizedTitle := strings.ReplaceAll(item.Title, "/", "\\/")
-
-		filename := sanitizedTitle + ".mp3"
-
-		filepath, _ := filepath.Abs(request.Directory + "/" + filename)
 
 		if err := os.WriteFile(filepath, audioContent, 0o644); err != nil {
 			log.Printf("err: %v\n", err)

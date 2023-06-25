@@ -6,13 +6,25 @@ import (
 	"unicode/utf8"
 )
 
-var table = []*unicode.RangeTable{
-	unicode.Pf,
-	unicode.Sc,
-	unicode.Number,
+var JAPANESE_UNICODE_RANGE = []*unicode.RangeTable{
+	unicode.Hiragana, // Hiragana is the set of Unicode characters in script Hiragana.
 }
 
-func GetSanitizedLangCode(s string) string {
+var CHINESE_UNICODE_RANGE = []*unicode.RangeTable{
+	unicode.Han, // Han is the set of Unicode characters in script Han.
+}
+
+// Guess the language code for a string by looking at the unicode
+func GuessLanguageByUnicode(title string) string {
+	for _, c := range title {
+		if unicode.In(c, CHINESE_UNICODE_RANGE...) {
+			return "zh-CN"
+		}
+	}
+	return "en-US"
+}
+
+func GetSanitizedLanguageCode(s string) string {
 	s2 := strings.Split(s, "-")
 
 	return s2[0] + "-" + strings.ToUpper(s2[len(s2)-1])
