@@ -105,7 +105,7 @@ func main() {
 				log.Panicf("error: %v", err)
 			}
 
-			createSpeechFromItems(*feed, config, &work, dir)
+			createSpeechFromItems(feed, config, &work, dir)
 			return nil
 		})
 	}
@@ -120,7 +120,7 @@ func main() {
 	log.Printf("Done processing all feeds")
 }
 
-func createSpeechFromItems(feed gofeed.Feed, config *config.Config, work *chan *WorkerRequest, direcory *string) {
+func createSpeechFromItems(feed *gofeed.Feed, config *config.Config, work *chan *WorkerRequest, direcory *string) {
 	log.Printf("feed.Title: %v\n", feed.Title)
 
 	itemSize := func(size int, limit int) int {
@@ -149,19 +149,24 @@ func createSpeechFromItems(feed gofeed.Feed, config *config.Config, work *chan *
 
 // This code is taken from sample google TTS code with some modification
 // Source: https://cloud.google.com/text-to-speech/docs/libraries
-func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, incomingItems *chan *WorkerRequest, ctx context.Context) error {
+func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, workerItems *chan *WorkerRequest, ctx context.Context) error {
 	defer wg.Done()
 
-	for incomingItem := range *incomingItems {
-		item := incomingItem.Item
+	for workerItem := range *workerItems {
+		feedItem := workerItem.Item
 
-		sanitizedTitle := strings.ReplaceAll(item.Title, "/", "\\/")
+		sanitizedTitle := strings.ReplaceAll(feedItem.Title, "/", "\\/")
 		filename := sanitizedTitle + ".mp3"
-		filepath, _ := filepath.Abs(incomingItem.Directory + "/" + filename)
+		filepath, _ := filepath.Abs(workerItem.Directory + "/" + filename)
 
-		log.Printf("Start procesing %v ", item.Title)
+		if _, err := os.Stat(filepath); err == nil {
+			log.Printf("File exists at path: %s\n, skip generating", filepath)
+			return nil
+		}
 
-		speechRequests := helper.GetSynthesizeSpeechRequests(item, incomingItem.LanguageCode, incomingItem.UseNaturalVoice)
+		log.Printf("Start procesing %v ", feedItem.Title)
+
+		speechRequests := helper.GetSynthesizeSpeechRequests(feedItem, workerItem.LanguageCode, workerItem.UseNaturalVoice)
 		audioContent := make([]byte, 0)
 
 		for _, ssr := range speechRequests {
@@ -179,7 +184,7 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, inc
 			return err
 		}
 
-		log.Printf("Finished Processing: %v, written to %v\n", item.Title, filepath)
+		log.Printf("Finished Processing: %v, written to %v\n", feedItem.Title, filepath)
 	}
 
 	return nil
