@@ -20,10 +20,9 @@ jobs:
       - name: Generate build files
         uses: thatisuday/go-cross-build@v1
         with:
-            platforms: 'linux/amd64, darwin/amd64, windows/amd64, linux/arm, linux/arm64'
+            platforms: 'linux/amd64, darwin/amd64, windows/amd64'
             name: 'rss-to-podcast'
             compress: 'false'
-            package: ""
             dest: 'dist'
       - name: Upload build artifacts
         uses: actions/upload-artifact@main
