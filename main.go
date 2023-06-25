@@ -34,7 +34,7 @@ import (
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
 	"github.com/KevinSJ/rss-to-podcast/internal/config"
-	"github.com/KevinSJ/rss-to-podcast/internal/types"
+	"github.com/KevinSJ/rss-to-podcast/internal/helper"
 	"github.com/mmcdole/gofeed"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
@@ -100,7 +100,7 @@ func main() {
 
 			// create folder based on RSS update date, this will be used to store all
 			// generated mp3s.
-			dir, err := types.CreateDirectory(*feed)
+			dir, err := helper.CreateDirectory(*feed)
 			if err != nil {
 				log.Panicf("error: %v", err)
 			}
@@ -161,7 +161,7 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, inc
 
 		log.Printf("Start procesing %v ", item.Title)
 
-		speechRequests := types.GetSynthesizeSpeechRequests(item, incomingItem.LanguageCode, incomingItem.UseNaturalVoice)
+		speechRequests := helper.GetSynthesizeSpeechRequests(item, incomingItem.LanguageCode, incomingItem.UseNaturalVoice)
 		audioContent := make([]byte, 0)
 
 		for _, ssr := range speechRequests {
