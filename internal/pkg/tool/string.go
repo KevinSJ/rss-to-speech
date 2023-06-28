@@ -1,4 +1,4 @@
-package helper
+package tool
 
 import (
 	"strings"
@@ -15,7 +15,7 @@ var CHINESE_UNICODE_RANGE = []*unicode.RangeTable{
 }
 
 // Guess the language code for a string by looking at the unicode
-func guessLanguageByUnicode(title string) string {
+func GuessLanguageByUnicode(title string) string {
 	for _, c := range title {
 		if unicode.In(c, CHINESE_UNICODE_RANGE...) {
 			return "zh-CN"
@@ -24,7 +24,7 @@ func guessLanguageByUnicode(title string) string {
 	return "en-US"
 }
 
-func getSanitizedLanguageCode(s string) string {
+func GetSanitizedLanguageCode(s string) string {
 	s2 := strings.Split(s, "-")
 
 	return s2[0] + "-" + strings.ToUpper(s2[len(s2)-1])
@@ -32,7 +32,7 @@ func getSanitizedLanguageCode(s string) string {
 
 // returns the splited string by the size, chunkSize will be rounded to smallest
 // int divisble by the rune size
-func chunksByte(s string, chunkSize int) []string {
+func ChunksByte(s string, chunkSize int) []string {
 	if len(s) == 0 {
 		return nil
 	}
@@ -57,7 +57,5 @@ func chunksByte(s string, chunkSize int) []string {
 		}
 	}
 
-	chunks = append(chunks, s[currentStart:])
-
-	return chunks
+	return append(chunks, s[currentStart:])
 }

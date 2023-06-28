@@ -1,10 +1,10 @@
-package helper
+package rss
 
 import (
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
+	"github.com/KevinSJ/rss-to-podcast/internal/pkg/tool"
 	"github.com/mmcdole/gofeed"
 )
-
 
 var VOICE_NAME_MAP_WAVENET = map[string]string{
 	"zh-CN": "cmn-CN-Wavenet-A",
@@ -20,23 +20,22 @@ func getSanitizedContentChunks(item *gofeed.Item) (textchunks []string) {
 	content := item.Title + "\n\n"
 
 	if len(item.Content) > 0 {
-		content += stripHtmlTags(item.Content)
+		content += tool.StripHtmlTags(item.Content)
 	} else if len(item.Description) > 0 {
-		content += stripHtmlTags(item.Description)
+		content += tool.StripHtmlTags(item.Description)
 	}
 
-	return chunksByte(content, 5000)
+	return tool.ChunksByte(content, 5000)
 }
-
 
 func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, UseNaturalVoice bool) []*texttospeechpb.SynthesizeSpeechRequest {
 	itemContent := getSanitizedContentChunks(item)
 
 	if len(lang) == 0 {
-		lang = guessLanguageByUnicode(item.Title)
+		lang = tool.GuessLanguageByUnicode(item.Title)
 	}
 
-	lang = getSanitizedLanguageCode(lang)
+	lang = tool.GetSanitizedLanguageCode(lang)
 
 	languageName := VOICE_NAME_MAP_STANDARD[lang]
 	if UseNaturalVoice {

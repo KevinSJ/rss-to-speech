@@ -1,4 +1,4 @@
-package helper
+package tool
 
 import (
 	"strings"
@@ -12,7 +12,7 @@ const (
 
 // Aggressively strips HTML tags from a string.
 // It will only keep anything between `>` and `<`.
-func stripHtmlTags(s string) string {
+func StripHtmlTags(s string) string {
 	// Setup a string builder and allocate enough memory for the new string.
 	var builder strings.Builder
 	builder.Grow(len(s) + utf8.UTFMax)

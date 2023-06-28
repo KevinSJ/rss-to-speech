@@ -1,4 +1,4 @@
-package helper
+package rss
 
 import (
 	"log"
@@ -7,6 +7,8 @@ import (
 
 	"github.com/mmcdole/gofeed"
 )
+
+
 
 func getUpdatedDate(f gofeed.Feed) *time.Time {
 	if f.UpdatedParsed != nil {
@@ -21,9 +23,7 @@ func getUpdatedDate(f gofeed.Feed) *time.Time {
 }
 
 func CreateDirectory(f gofeed.Feed) (dir *string, err error) {
-	updatedDate := getUpdatedDate(f)
-
-	directory := f.Title + "_" + updatedDate.Local().Format("2006-01-02")
+	directory := f.Title
 
 	if err := os.MkdirAll(directory, 0o755); err != nil {
 		log.Printf("Failed to create directory")
