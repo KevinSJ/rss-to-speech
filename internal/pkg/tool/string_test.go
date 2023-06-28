@@ -83,7 +83,7 @@ func Test_chunksByte(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := chunksByte(tt.args.s, tt.args.chunkSize); !reflect.DeepEqual(got, tt.want) {
+			if got := ChunksByte(tt.args.s, tt.args.chunkSize); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("chunksByte() = %v, want %v", got, tt.want)
 			}
 		})
@@ -127,7 +127,7 @@ func TestGuessLanguageCode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := guessLanguageByUnicode(tt.args.s); got != tt.want {
+			if got := GuessLanguageByUnicode(tt.args.s); got != tt.want {
 				t.Errorf("GetSanitizedLangCode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -151,7 +151,7 @@ func TestGetSanitizedLangCode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getSanitizedLanguageCode(tt.args.s); got != tt.want {
+			if got := GetSanitizedLanguageCode(tt.args.s); got != tt.want {
 				t.Errorf("GetSanitizedLangCode() = %v, want %v", got, tt.want)
 			}
 		})
