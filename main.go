@@ -61,7 +61,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-    work := *worker.NewWorkerGroup(config.ConcurrentWorkers, &wg, config.MaxItemPerFeed*len(config.Feeds), client, ctx)
+	work := *worker.NewWorkerGroup(config.ConcurrentWorkers, &wg, config.MaxItemPerFeed*len(config.Feeds), client, ctx)
 
 	for _, _v := range config.Feeds {
 		v := _v
@@ -101,5 +101,3 @@ func main() {
 
 	log.Printf("Done processing all feeds")
 }
-
-

@@ -88,7 +88,7 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, wor
 			audioContent = append(audioContent, resp.AudioContent...)
 		}
 
-		if err := os.WriteFile(filepath, audioContent, 0o644); err != nil {
+		if err := os.WriteFile(filepath, audioContent, 0o755); err != nil {
 			log.Printf("err: %v\n", err)
 			return err
 		}
@@ -99,12 +99,12 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, wor
 	return nil
 }
 
-func NewWorkerGroup(workerCount int, wg *sync.WaitGroup, channelSize int, client *texttospeech.Client, ctx context.Context) (*chan *WorkerRequest){
+func NewWorkerGroup(workerCount int, wg *sync.WaitGroup, channelSize int, client *texttospeech.Client, ctx context.Context) *chan *WorkerRequest {
 	work := make(chan *WorkerRequest, channelSize)
-    for i := 0; i < workerCount; i++ {
-        wg.Add(1)
-        go speechSynthesizeWorker(wg, client, &work, ctx)
-    }
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go speechSynthesizeWorker(wg, client, &work, ctx)
+	}
 
-    return &work
+	return &work
 }
