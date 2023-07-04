@@ -93,6 +93,21 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, wor
 			return err
 		}
 
+		fileTime := func(item *gofeed.Item) time.Time {
+			if item.UpdatedParsed != nil {
+				return item.UpdatedParsed.Local()
+			}
+			if item.PublishedParsed != nil {
+				return item.PublishedParsed.Local()
+			}
+			return time.Now().Local()
+		}(feedItem)
+
+		if err := os.Chtimes(filepath, fileTime, fileTime); err != nil {
+			log.Printf("err: %v\n", err)
+			return err
+		}
+
 		log.Printf("Finished Processing: %v, written to %v\n", feedItem.Title, filepath)
 	}
 
