@@ -22,15 +22,18 @@ fmt:
 lint:
 	./bin/golangci-lint run --fix ./...
 
-ci: lint test
+ci: test clean build
 
-build:
-	go build -ldflags "-s -w" -o rss-to-podcast ./main.go
+clean:
+	go clean && rm -rf ./dist
 
-build-aarm64:
-	env GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o rss-to-podcast ./main.go
+build: clean
+	goreleaser release --snapshot
 
-.DEFAULT_GOAL := build
+build-aarm64-linux:
+	env GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o rss-to-podcast-arm ./main.go
+
+.DEFAULT_GOAL := ci
 
 #all: build-armv7 build-x64
 #build-armv7:
