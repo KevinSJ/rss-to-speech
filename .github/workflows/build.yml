@@ -1,45 +1,48 @@
-# workflow name
-name: Generate release-artifacts
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-# on events
+name: Release
+
 on:
   workflow_dispatch:
+  push:
+    # run only against tags
+    tags:
+      - '*'
 
-# workflow tasks
 jobs:
-  generate:
+
+  build:
     name: Generate cross-platform builds
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v2
-      - name: Generate build files
-        uses: thatisuday/go-cross-build@v1
-        with:
-            platforms: 'linux/amd64, darwin/amd64, windows/amd64'
-            name: 'rss-to-podcast'
-            compress: 'false'
-            dest: 'dist'
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@main
-        with:
-           path: ./dist/*
-      - name: Release tag
-        id: tag
-        run: |
-          echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
-      - name: Upload as release
-        id: release_upload
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.tag.outputs.release_tag }}
-          files: ./dist/*
+    - uses: actions/checkout@v3
 
-      #- name: Upload build artifacts
-        #uses: skx/github-action-publish-binaries@master
-        #env:
-            #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        #with:
-            #args: ./dist/*
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: stable
+    - run: git fetch --force --tags
+
+    - uses: goreleaser/goreleaser-action@v4
+      with:
+        # either 'goreleaser' (default) or 'goreleaser-pro':
+        distribution: goreleaser
+        version: latest
+        args: release --clean
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@main
+      with:
+        path: ./dist/*
+
+    - name: Upload as release
+      id: release_upload
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.release_tag }}
+        files: ./dist/*
