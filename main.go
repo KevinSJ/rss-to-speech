@@ -61,7 +61,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	work := *worker.NewWorkerGroup(config.ConcurrentWorkers, &wg, config.MaxItemPerFeed*len(config.Feeds), client, ctx)
+	workerGroup := *worker.NewWorkerGroup(config, &wg, client, ctx)
 
 	for _, _v := range config.Feeds {
 		v := _v
@@ -87,7 +87,7 @@ func main() {
 				log.Panicf("error: %v", err)
 			}
 
-			worker.CreateSpeechFromItems(feed, config, &work, dir)
+			workerGroup.CreateSpeechFromItems(feed, dir)
 			return nil
 		})
 	}
@@ -96,7 +96,7 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	close(work)
+	workerGroup.Close()
 	wg.Wait()
 
 	log.Printf("Done processing all feeds")
