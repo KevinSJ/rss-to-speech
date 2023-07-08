@@ -29,7 +29,17 @@ type WorkerRequest struct {
 	UseNaturalVoice bool
 }
 
-func CreateSpeechFromItems(feed *gofeed.Feed, config *config.Config, work *chan *WorkerRequest, direcory *string) {
+type WorkerGroup struct {
+	config  *config.Config
+	channel *chan *WorkerRequest
+	client  *texttospeech.Client
+}
+
+func (w *WorkerGroup) Close() {
+	close(*w.channel)
+}
+
+func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string) {
 	log.Printf("feed.Title: %v\n", feed.Title)
 
 	itemSize := func(size int, limit int) int {
@@ -38,19 +48,19 @@ func CreateSpeechFromItems(feed *gofeed.Feed, config *config.Config, work *chan 
 		}
 
 		return size
-	}(len(feed.Items), config.MaxItemPerFeed)
+	}(len(feed.Items), w.config.MaxItemPerFeed)
 
 	isInRange := func(itemPublishTime *time.Time) bool {
-		return time.Since((*itemPublishTime).Local()).Hours() <= config.ItemSince
+		return time.Since((*itemPublishTime).Local()).Hours() <= w.config.ItemSince
 	}
 
 	for _, item := range feed.Items[:itemSize] {
 		if isInRange(item.PublishedParsed) {
-			*work <- &WorkerRequest{
+			*w.channel <- &WorkerRequest{
 				Item:            item,
 				LanguageCode:    feed.Language,
 				Directory:       *direcory,
-				UseNaturalVoice: config.UseNaturalVoice,
+				UseNaturalVoice: w.config.UseNaturalVoice,
 			}
 		}
 	}
@@ -58,7 +68,7 @@ func CreateSpeechFromItems(feed *gofeed.Feed, config *config.Config, work *chan 
 
 // This code is taken from sample google TTS code with some modification
 // Source: https://cloud.google.com/text-to-speech/docs/libraries
-func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, workerItems *chan *WorkerRequest, ctx context.Context) error {
+func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, workerItems *chan *WorkerRequest, ctx context.Context) error {
 	defer wg.Done()
 
 	for workerItem := range *workerItems {
@@ -81,7 +91,7 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, wor
 		for _, ssr := range speechRequests {
 			resp, err := client.SynthesizeSpeech(ctx, ssr)
 			if err != nil {
-				log.Printf("err: %v\n", err)
+				log.Printf("Encountered error when calling google text to speech service: %v\n", err)
 				return err
 			}
 
@@ -114,12 +124,16 @@ func speechSynthesizeWorker(wg *sync.WaitGroup, client *texttospeech.Client, wor
 	return nil
 }
 
-func NewWorkerGroup(workerCount int, wg *sync.WaitGroup, channelSize int, client *texttospeech.Client, ctx context.Context) *chan *WorkerRequest {
-	work := make(chan *WorkerRequest, channelSize)
-	for i := 0; i < workerCount; i++ {
+func NewWorkerGroup(config *config.Config, wg *sync.WaitGroup, client *texttospeech.Client, ctx context.Context) *WorkerGroup {
+	work := make(chan *WorkerRequest, config.MaxItemPerFeed*len(config.Feeds))
+	for i := 0; i < config.ConcurrentWorkers; i++ {
 		wg.Add(1)
-		go speechSynthesizeWorker(wg, client, &work, ctx)
+		go processSpeechGeneration(wg, client, &work, ctx)
 	}
 
-	return &work
+	return &WorkerGroup{
+		config:  config,
+		channel: &work,
+		client:  client,
+	}
 }

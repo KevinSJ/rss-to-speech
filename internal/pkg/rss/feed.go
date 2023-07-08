@@ -17,8 +17,8 @@ func getUpdatedDate(f gofeed.Feed) *time.Time {
 	if f.PublishedParsed != nil {
 		return f.PublishedParsed
 	}
-	currentDate := time.Now()
 
+	currentDate := time.Now()
 	return &currentDate
 }
 
