@@ -31,7 +31,7 @@ build: clean
 	goreleaser release --snapshot
 
 build-aarm64-linux:
-	env GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o rss-to-podcast-arm ./main.go
+	env GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o rss-to-speech-arm ./main.go
 
 .DEFAULT_GOAL := ci
 

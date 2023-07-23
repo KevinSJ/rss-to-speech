@@ -1,4 +1,4 @@
-RSS to Podcast
+# RSS to Speech
 
 ---
 
@@ -18,5 +18,5 @@ RSS to Podcast
 - You will need to download the Google credential and put it at the current directory (or somewhere else if you change the credential path)
 - Add RSS feeds (has to emit full text, for now)
 - Build the program from source `make`
-- Run the program, `./rss-to-podcast`
+- Run the program, `./rss-to-speech`
 - Once finished, you will see different folders with title of the RSS feed as name.
