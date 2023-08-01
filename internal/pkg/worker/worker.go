@@ -27,6 +27,9 @@ type WorkerRequest struct {
 
 	// Whether to use natural Voice
 	UseNaturalVoice bool
+
+	// Speed of Synthesized Speech
+	SpeechSpeed float64
 }
 
 type WorkerGroup struct {
@@ -61,6 +64,7 @@ func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string)
 				LanguageCode:    feed.Language,
 				Directory:       *direcory,
 				UseNaturalVoice: w.config.UseNaturalVoice,
+				SpeechSpeed:     w.config.SpeechSpeed,
 			}
 		}
 	}
@@ -74,9 +78,8 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 	for workerItem := range *workerItems {
 		feedItem := workerItem.Item
 
-		sanitizedTitle := strings.ReplaceAll(feedItem.Title, "/", "\\/")
-		filename := sanitizedTitle + ".mp3"
-		filepath, _ := filepath.Abs(workerItem.Directory + "/" + filename)
+		fileName := strings.ReplaceAll(feedItem.Title, "/", "\\/") + ".mp3"
+		filepath, _ := filepath.Abs(workerItem.Directory + "/" + fileName)
 
 		if _, err := os.Stat(filepath); err == nil {
 			log.Printf("File exists at path: %s\n, skip generating", filepath)
@@ -85,7 +88,7 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 
 		log.Printf("Start procesing %v ", feedItem.Title)
 
-		speechRequests := rss.GetSynthesizeSpeechRequests(feedItem, workerItem.LanguageCode, workerItem.UseNaturalVoice)
+		speechRequests := rss.GetSynthesizeSpeechRequests(feedItem, workerItem.LanguageCode, workerItem.UseNaturalVoice, workerItem.SpeechSpeed)
 		audioContent := make([]byte, 0)
 
 		for _, ssr := range speechRequests {
@@ -99,7 +102,7 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 		}
 
 		if err := os.WriteFile(filepath, audioContent, 0o755); err != nil {
-			log.Printf("err: %v\n", err)
+			log.Printf("err writing synthesized file: %v\n", err)
 			return err
 		}
 
@@ -125,7 +128,9 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 }
 
 func NewWorkerGroup(config *config.Config, wg *sync.WaitGroup, client *texttospeech.Client, ctx context.Context) *WorkerGroup {
-	work := make(chan *WorkerRequest, config.MaxItemPerFeed*len(config.Feeds))
+	channelSize := config.MaxItemPerFeed * len(config.Feeds)
+	work := make(chan *WorkerRequest, channelSize)
+
 	for i := 0; i < config.ConcurrentWorkers; i++ {
 		wg.Add(1)
 		go processSpeechGeneration(wg, client, &work, ctx)
