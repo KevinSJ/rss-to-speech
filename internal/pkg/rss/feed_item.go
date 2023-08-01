@@ -28,7 +28,7 @@ func getSanitizedContentChunks(item *gofeed.Item) (textchunks []string) {
 	return tool.ChunksByte(content, 5000)
 }
 
-func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, UseNaturalVoice bool) []*texttospeechpb.SynthesizeSpeechRequest {
+func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, useNaturalVoice bool, speechSpeed float64) []*texttospeechpb.SynthesizeSpeechRequest {
 	itemContent := getSanitizedContentChunks(item)
 
 	if len(lang) == 0 {
@@ -38,7 +38,7 @@ func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, UseNaturalVoice
 	lang = tool.GetSanitizedLanguageCode(lang)
 
 	languageName := VOICE_NAME_MAP_STANDARD[lang]
-	if UseNaturalVoice {
+	if useNaturalVoice {
 		languageName = VOICE_NAME_MAP_WAVENET[lang]
 	}
 
@@ -61,7 +61,7 @@ func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, UseNaturalVoice
 			// Select the type of audio file you want returned.
 			AudioConfig: &texttospeechpb.AudioConfig{
 				AudioEncoding: texttospeechpb.AudioEncoding_MP3,
-				SpeakingRate:  1.25,
+				SpeakingRate:  speechSpeed,
 			},
 		}
 
