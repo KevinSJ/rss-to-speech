@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,13 +34,15 @@ type WorkerRequest struct {
 }
 
 type WorkerGroup struct {
-	config  *config.Config
-	channel *chan *WorkerRequest
-	client  *texttospeech.Client
+	config    *config.Config
+	channel   chan *WorkerRequest
+	client    *texttospeech.Client
+	waitGroup *sync.WaitGroup
 }
 
 func (w *WorkerGroup) Close() {
-	close(*w.channel)
+	defer log.Printf("Closing channel")
+	close(w.channel)
 }
 
 func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string) {
@@ -60,25 +63,23 @@ func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string)
 	for _, item := range feed.Items[:itemSize] {
 		if isInRange(item.PublishedParsed) {
 			log.Printf("Adding item... title: %s", item.Title)
-			*w.channel <- &WorkerRequest{
+			w.channel <- &WorkerRequest{
 				Item:            item,
 				LanguageCode:    feed.Language,
 				Directory:       *direcory,
 				UseNaturalVoice: w.config.UseNaturalVoice,
 				SpeechSpeed:     w.config.SpeechSpeed,
 			}
-			continue
 		}
-		log.Printf("Skipping item... title: %s", item.Title)
 	}
 }
 
 // This code is taken from sample google TTS code with some modification
 // Source: https://cloud.google.com/text-to-speech/docs/libraries
-func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, workerItems *chan *WorkerRequest, ctx context.Context) error {
+func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, workerItems chan *WorkerRequest, ctx context.Context) error {
 	defer wg.Done()
 
-	for workerItem := range *workerItems {
+	for workerItem := range workerItems {
 		feedItem := workerItem.Item
 
 		log.Printf("Start procesing %v ", feedItem.Title)
@@ -88,7 +89,7 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 
 		if _, err := os.Stat(filepath); err == nil {
 			log.Printf("File exists at path: %s\n, skip generating", filepath)
-			return nil
+			continue
 		}
 
 		speechRequests := rss.GetSynthesizeSpeechRequests(feedItem, workerItem.LanguageCode, workerItem.UseNaturalVoice, workerItem.SpeechSpeed)
@@ -133,15 +134,18 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 func NewWorkerGroup(config *config.Config, wg *sync.WaitGroup, client *texttospeech.Client, ctx context.Context) *WorkerGroup {
 	channelSize := config.MaxItemPerFeed * len(config.Feeds)
 	work := make(chan *WorkerRequest, channelSize)
-	wg.Add(channelSize)
 
-	for i := 0; i < config.ConcurrentWorkers; i++ {
-		go processSpeechGeneration(wg, client, &work, ctx)
+	workerSize := int(math.Min(float64(config.ConcurrentWorkers), float64(channelSize)))
+	wg.Add(workerSize)
+
+	for i := 0; i < workerSize; i++ {
+		go processSpeechGeneration(wg, client, work, ctx)
 	}
 
 	return &WorkerGroup{
-		config:  config,
-		channel: &work,
-		client:  client,
+		config:    config,
+		channel:   work,
+		client:    client,
+		waitGroup: wg,
 	}
 }

@@ -41,6 +41,7 @@ import (
 )
 
 func main() {
+	defer log.Printf("Done processing all feeds")
 	configPath, _ := filepath.Abs("./config.yaml")
 	config, err := config.NewConfig(configPath)
 	if err != nil {
@@ -61,7 +62,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	workerGroup := *worker.NewWorkerGroup(config, &wg, client, ctx)
+	workerGroup := worker.NewWorkerGroup(config, &wg, client, ctx)
 
 	for _, _v := range config.Feeds {
 		v := _v
@@ -99,6 +100,4 @@ func main() {
 
 	workerGroup.Close()
 	wg.Wait()
-
-	log.Printf("Done processing all feeds")
 }
