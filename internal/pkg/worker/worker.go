@@ -59,6 +59,7 @@ func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string)
 
 	for _, item := range feed.Items[:itemSize] {
 		if isInRange(item.PublishedParsed) {
+			log.Printf("Adding item... title: %s", item.Title)
 			*w.channel <- &WorkerRequest{
 				Item:            item,
 				LanguageCode:    feed.Language,
@@ -66,7 +67,9 @@ func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string)
 				UseNaturalVoice: w.config.UseNaturalVoice,
 				SpeechSpeed:     w.config.SpeechSpeed,
 			}
+			continue
 		}
+		log.Printf("Skipping item... title: %s", item.Title)
 	}
 }
 
@@ -78,6 +81,8 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 	for workerItem := range *workerItems {
 		feedItem := workerItem.Item
 
+		log.Printf("Start procesing %v ", feedItem.Title)
+
 		fileName := strings.ReplaceAll(feedItem.Title, "/", "\\/") + ".mp3"
 		filepath, _ := filepath.Abs(workerItem.Directory + "/" + fileName)
 
@@ -85,8 +90,6 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 			log.Printf("File exists at path: %s\n, skip generating", filepath)
 			return nil
 		}
-
-		log.Printf("Start procesing %v ", feedItem.Title)
 
 		speechRequests := rss.GetSynthesizeSpeechRequests(feedItem, workerItem.LanguageCode, workerItem.UseNaturalVoice, workerItem.SpeechSpeed)
 		audioContent := make([]byte, 0)
