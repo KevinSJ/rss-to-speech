@@ -1,5 +1,5 @@
 /*
-*rss-to-tts A program to read rss articles to tts mp3s
+*rss-to-speech A program to read rss articles to tts mp3s
 *Copyright © 2022 Kevin Jiang
 *
 *Permission is hereby granted, free of charge, to any person obtaining
@@ -69,7 +69,7 @@ func main() {
 			log.Printf("feed: %v\n", v)
 			feed, err := fp.ParseURL(v)
 			if err != nil {
-				log.Fatalf("Error GET: %v\n", err)
+				log.Fatalf("Error GET: %v. \n", err)
 			}
 
 			hasValidItems := slices.IndexFunc(feed.Items, func(item *gofeed.Item) bool {
@@ -77,6 +77,7 @@ func main() {
 			})
 
 			if hasValidItems == -1 {
+				log.Printf("feed: %v has no valid item.\n", v)
 				return nil
 			}
 
