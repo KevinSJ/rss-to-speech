@@ -130,9 +130,9 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 func NewWorkerGroup(config *config.Config, wg *sync.WaitGroup, client *texttospeech.Client, ctx context.Context) *WorkerGroup {
 	channelSize := config.MaxItemPerFeed * len(config.Feeds)
 	work := make(chan *WorkerRequest, channelSize)
+	wg.Add(channelSize)
 
 	for i := 0; i < config.ConcurrentWorkers; i++ {
-		wg.Add(1)
 		go processSpeechGeneration(wg, client, &work, ctx)
 	}
 
