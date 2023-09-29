@@ -45,6 +45,10 @@ func (w *WorkerGroup) Close() {
 	close(w.channel)
 }
 
+func isInRange(itemPublishTime *time.Time, itemSince float64) bool {
+	return time.Since((*itemPublishTime).Local()).Hours() <= itemSince
+}
+
 func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string) {
 	log.Printf("feed.Title: %v\n", feed.Title)
 
@@ -56,12 +60,8 @@ func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string)
 		return size
 	}(len(feed.Items), w.config.MaxItemPerFeed)
 
-	isInRange := func(itemPublishTime *time.Time) bool {
-		return time.Since((*itemPublishTime).Local()).Hours() <= w.config.ItemSince
-	}
-
 	for _, item := range feed.Items[:itemSize] {
-		if isInRange(item.PublishedParsed) {
+		if isInRange(item.PublishedParsed, w.config.ItemSince) {
 			log.Printf("Adding item... title: %s", item.Title)
 			w.channel <- &WorkerRequest{
 				Item:            item,
