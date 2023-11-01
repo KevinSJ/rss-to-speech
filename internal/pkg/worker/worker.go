@@ -60,8 +60,10 @@ func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string)
 		return size
 	}(len(feed.Items), w.config.MaxItemPerFeed)
 
+	itemCnt := 0
+
 	for _, item := range feed.Items[:itemSize] {
-		if isInRange(item.PublishedParsed, w.config.ItemSince) {
+		if isInRange(item.PublishedParsed, w.config.ItemSince) && itemCnt < itemSize {
 			log.Printf("Adding item... title: %s", item.Title)
 			w.channel <- &WorkerRequest{
 				Item:            item,
@@ -70,6 +72,7 @@ func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string)
 				UseNaturalVoice: w.config.UseNaturalVoice,
 				SpeechSpeed:     w.config.SpeechSpeed,
 			}
+			itemCnt++
 		}
 	}
 }
@@ -133,18 +136,18 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 
 func NewWorkerGroup(config *config.Config, wg *sync.WaitGroup, client *texttospeech.Client, ctx context.Context) *WorkerGroup {
 	channelSize := config.MaxItemPerFeed * len(config.Feeds)
-	work := make(chan *WorkerRequest, channelSize)
+	channel := make(chan *WorkerRequest, channelSize)
 
 	workerSize := int(math.Min(float64(config.ConcurrentWorkers), float64(channelSize)))
 	wg.Add(workerSize)
 
 	for i := 0; i < workerSize; i++ {
-		go processSpeechGeneration(wg, client, work, ctx)
+		go processSpeechGeneration(wg, client, channel, ctx)
 	}
 
 	return &WorkerGroup{
 		config:    config,
-		channel:   work,
+		channel:   channel,
 		client:    client,
 		waitGroup: wg,
 	}
