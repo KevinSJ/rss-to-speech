@@ -43,6 +43,7 @@ import (
 func main() {
 	defer log.Printf("Done processing all feeds")
 	configFile := flag.String("c", "./config.yaml", "config file of rss-to-speech")
+	flag.Parse()
 	config, err := config.NewConfig(*configFile)
 	if err != nil {
 		log.Fatalf("Unable to parse config file, error: %v", err)
