@@ -25,9 +25,9 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -42,8 +42,8 @@ import (
 
 func main() {
 	defer log.Printf("Done processing all feeds")
-	configPath, _ := filepath.Abs("./config.yaml")
-	config, err := config.NewConfig(configPath)
+	configFile := flag.String("c", "./config.yaml", "config file of rss-to-speech")
+	config, err := config.NewConfig(*configFile)
 	if err != nil {
 		log.Fatalf("Unable to parse config file, error: %v", err)
 	}
@@ -68,10 +68,7 @@ func main() {
 		v := _v
 		g.Go(func() error {
 			log.Printf("feed: %v\n", v)
-			feed, err := fp.ParseURL(v)
-			if err != nil {
-				log.Fatalf("Error GET: %v. \n", err)
-			}
+			feed := getFeedWithRetry(fp, v)
 
 			hasValidItems := slices.IndexFunc(feed.Items, func(item *gofeed.Item) bool {
 				return time.Since(item.PublishedParsed.Local()).Hours() <= config.ItemSince
@@ -100,4 +97,24 @@ func main() {
 
 	workerGroup.Close()
 	wg.Wait()
+}
+
+func getFeedWithRetry(fp *gofeed.Parser, v string) *gofeed.Feed {
+	const RETRY_CNT = 5
+	var feed *gofeed.Feed = nil
+	var err error = nil
+
+	for i := 0; i < RETRY_CNT; i++ {
+		if i > 0 {
+			log.Fatalf("Retry due to Error GET: %v. \n", err)
+			time.Sleep(2000)
+		}
+
+		feed, err = fp.ParseURL(v)
+		if err == nil && feed != nil {
+			return feed
+		}
+	}
+
+	return feed
 }
