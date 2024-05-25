@@ -107,7 +107,7 @@ func getFeedWithRetry(fp *gofeed.Parser, v string) *gofeed.Feed {
 
 	for i := 0; i < RETRY_CNT; i++ {
 		if i > 0 {
-			log.Fatalf("Retry due to Error GET: %v. \n", err)
+			log.Printf("Retry due to Error GET: %v. \n", err)
 			time.Sleep(2000)
 		}
 
