@@ -11,10 +11,13 @@ import (
 	"time"
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
+	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 	"github.com/KevinSJ/rss-to-podcast/internal/config"
 	"github.com/KevinSJ/rss-to-podcast/internal/pkg/rss"
 	"github.com/mmcdole/gofeed"
 )
+
+const SPEECH_SYNTHESIZE_RETRY_CNT = 5
 
 type WorkerRequest struct {
 	// Item for this request
@@ -99,13 +102,25 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 		audioContent := make([]byte, 0)
 
 		for _, ssr := range speechRequests {
-			resp, err := client.SynthesizeSpeech(ctx, ssr)
-			if err != nil {
-				log.Printf("Encountered error when calling google text to speech service: %v\n", err)
-				return err
-			}
+			var err error = nil
+			var resp *texttospeechpb.SynthesizeSpeechResponse = nil
+			for i := 0; i < SPEECH_SYNTHESIZE_RETRY_CNT; i++ {
+				if i > 0 {
+					log.Printf("Retry speech synthesize in 1 second due to error %v, count: %v", err, i)
+					time.Sleep(time.Second)
+				}
 
-			audioContent = append(audioContent, resp.AudioContent...)
+				resp, err = client.SynthesizeSpeech(ctx, ssr)
+				if err != nil {
+					log.Printf("Error Encountered, Response: %v\n", err.Error())
+					continue
+				}
+
+				if len(resp.AudioContent) > 0 {
+					audioContent = append(audioContent, resp.AudioContent...)
+                    break
+				}
+			}
 		}
 
 		if err := os.WriteFile(filepath, audioContent, 0o755); err != nil {
