@@ -40,13 +40,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const FEED_RETRY_CNT = 5
+
 func main() {
-	defer log.Printf("Done processing all feeds")
+    logger := log.New(os.Stdout, "[info] ", log.Ldate | log.Ltime)
+
+	defer logger.Printf("Done processing all feeds")
 	configFile := flag.String("c", "./config.yaml", "config file of rss-to-speech")
 	flag.Parse()
 	config, err := config.NewConfig(*configFile)
 	if err != nil {
-		log.Fatalf("Unable to parse config file, error: %v", err)
+		logger.Fatalf("Unable to parse config file, error: %v", err)
 	}
 
 	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", config.CredentialPath)
@@ -68,15 +72,20 @@ func main() {
 	for _, _v := range config.Feeds {
 		v := _v
 		g.Go(func() error {
-			log.Printf("feed: %v\n", v)
+			logger.Printf("feed: %v\n", v)
 			feed := getFeedWithRetry(fp, v)
+
+            if feed == nil {
+				logger.Printf("Fail to fetch feed: %v \n", v)
+                return nil
+            }
 
 			hasValidItems := slices.IndexFunc(feed.Items, func(item *gofeed.Item) bool {
 				return time.Since(item.PublishedParsed.Local()).Hours() <= config.ItemSince
 			})
 
 			if hasValidItems == -1 {
-				log.Printf("feed: %v has no valid item.\n", v)
+				logger.Printf("feed: %v has no valid item.\n", v)
 				return nil
 			}
 
@@ -84,7 +93,8 @@ func main() {
 			// generated mp3s.
 			dir, err := rss.CreateDirectory(*feed)
 			if err != nil {
-				log.Panicf("error: %v", err)
+				logger.Printf("error: %v", err)
+                return err
 			}
 
 			workerGroup.CreateSpeechFromItems(feed, dir)
@@ -93,7 +103,7 @@ func main() {
 	}
 
 	if err := g.Wait(); err != nil {
-		log.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 
 	workerGroup.Close()
@@ -101,11 +111,10 @@ func main() {
 }
 
 func getFeedWithRetry(fp *gofeed.Parser, v string) *gofeed.Feed {
-	const RETRY_CNT = 5
 	var feed *gofeed.Feed = nil
 	var err error = nil
 
-	for i := 0; i < RETRY_CNT; i++ {
+	for i := 0; i < FEED_RETRY_CNT; i++ {
 		if i > 0 {
 			log.Printf("Retry due to Error GET: %v. \n", err)
 			time.Sleep(2000)
