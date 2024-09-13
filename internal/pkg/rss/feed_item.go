@@ -12,7 +12,7 @@ var VOICE_NAME_MAP_WAVENET = map[string]string{
 }
 
 var VOICE_NAME_MAP_STANDARD = map[string]string{
-	"zh-CN": "cmn-CN-Standard-D",
+	"zh-CN": "cmn-CN-Standard-C",
 	"en-US": "en-US-Standard-C",
 }
 
@@ -29,7 +29,7 @@ func getSanitizedContentChunks(item *gofeed.Item) (textchunks []string) {
 }
 
 func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, useNaturalVoice bool, speechSpeed float64) []*texttospeechpb.SynthesizeSpeechRequest {
-	itemContent := getSanitizedContentChunks(item)
+	contentChunks := getSanitizedContentChunks(item)
 
 	if len(lang) == 0 {
 		lang = tool.GuessLanguageByUnicode(item.Title)
@@ -44,12 +44,12 @@ func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, useNaturalVoice
 
 	synthesizeRequest := make([]*texttospeechpb.SynthesizeSpeechRequest, 0)
 
-	for _, v := range itemContent {
+	for _, chunk := range contentChunks {
 
 		req := texttospeechpb.SynthesizeSpeechRequest{
 			// Set the text input to be synthesized.
 			Input: &texttospeechpb.SynthesisInput{
-				InputSource: &texttospeechpb.SynthesisInput_Text{Text: v},
+				InputSource: &texttospeechpb.SynthesisInput_Text{Text: chunk},
 			},
 			// Build the voice request, select the language code ("en-US") and the SSML
 			// voice gender ("neutral").
