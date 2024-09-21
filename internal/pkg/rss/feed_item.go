@@ -1,18 +1,20 @@
 package rss
 
 import (
+	"log"
+
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 	"github.com/KevinSJ/rss-to-podcast/internal/pkg/tool"
 	"github.com/mmcdole/gofeed"
 )
 
 var VOICE_NAME_MAP_WAVENET = map[string]string{
-	"zh-CN": "cmn-CN-Wavenet-A",
+	"cmn-CN": "cmn-CN-Wavenet-A",
 	"en-US": "en-US-Neural2-C",
 }
 
 var VOICE_NAME_MAP_STANDARD = map[string]string{
-	"zh-CN": "cmn-CN-Standard-C",
+	"cmn-CN": "cmn-CN-Standard-D",
 	"en-US": "en-US-Standard-C",
 }
 
@@ -41,6 +43,8 @@ func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, useNaturalVoice
 	if useNaturalVoice {
 		languageName = VOICE_NAME_MAP_WAVENET[lang]
 	}
+
+    log.Printf("using voice %v for language code %v", languageName, lang)
 
 	synthesizeRequest := make([]*texttospeechpb.SynthesizeSpeechRequest, 0)
 

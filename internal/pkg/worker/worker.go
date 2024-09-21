@@ -63,6 +63,14 @@ func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string)
 		return size
 	}(len(feed.Items), w.config.MaxItemPerFeed)
 
+	feedLanguage := func(lang string) string {
+		if strings.Contains(strings.ToLower(lang), "zh") {
+			return "cmn-CN"
+		}
+
+		return lang
+	}(feed.Language)
+
 	itemCnt := 0
 
 	for _, item := range feed.Items[:itemSize] {
@@ -70,7 +78,7 @@ func (w *WorkerGroup) CreateSpeechFromItems(feed *gofeed.Feed, direcory *string)
 			log.Printf("Adding item... title: %s", item.Title)
 			w.channel <- &WorkerRequest{
 				Item:            item,
-				LanguageCode:    feed.Language,
+				LanguageCode:    feedLanguage,
 				Directory:       *direcory,
 				UseNaturalVoice: w.config.UseNaturalVoice,
 				SpeechSpeed:     w.config.SpeechSpeed,
@@ -118,8 +126,11 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 
 				if len(resp.AudioContent) > 0 {
 					audioContent = append(audioContent, resp.AudioContent...)
-                    break
+					break
 				}
+			}
+			if err != nil {
+				return err
 			}
 		}
 

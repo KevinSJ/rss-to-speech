@@ -18,7 +18,7 @@ var CHINESE_UNICODE_RANGE = []*unicode.RangeTable{
 func GuessLanguageByUnicode(title string) string {
 	for _, c := range title {
 		if unicode.In(c, CHINESE_UNICODE_RANGE...) {
-			return "zh-CN"
+			return "cmn-CN"
 		}
 	}
 	return "en-US"
