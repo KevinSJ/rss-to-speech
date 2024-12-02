@@ -14,6 +14,8 @@ import (
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 	"github.com/KevinSJ/rss-to-podcast/internal/config"
 	"github.com/KevinSJ/rss-to-podcast/internal/pkg/rss"
+	"github.com/KevinSJ/rss-to-podcast/internal/pkg/tool"
+	uuid "github.com/google/uuid"
 	"github.com/mmcdole/gofeed"
 )
 
@@ -98,8 +100,9 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 
 		log.Printf("Start procesing %v ", feedItem.Title)
 
-		fileName := strings.ReplaceAll(feedItem.Title, "/", "\\/") + ".mp3"
-		filepath, _ := filepath.Abs(workerItem.Directory + "/" + fileName)
+		//fileName := strings.ReplaceAll(feedItem.Title, "/", "\\/") + ".mp3"
+        uuid, _ := uuid.NewV7()
+		filepath, _ := filepath.Abs(workerItem.Directory + "/" + uuid.String() + ".mp3")
 
 		if _, err := os.Stat(filepath); err == nil {
 			log.Printf("File exists at path: %s\n, skip generating", filepath)
@@ -138,6 +141,8 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 			log.Printf("err writing synthesized file: %v\n", err)
 			return err
 		}
+
+		tool.WriteID3Tag(filepath, feedItem.Title, workerItem.Directory)
 
 		fileTime := func(item *gofeed.Item) time.Time {
 			if item.UpdatedParsed != nil {
