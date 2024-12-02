@@ -50,9 +50,6 @@ func WriteID3Tag(filePath string, title, artist string) error {
 	// Create header using syncSafeSize
 	header := createID3Header(int(syncSafeSize))
 
-	// Create header
-	//header := createID3Header(tagSize)
-
 	// Create the full tag
 	tag := append(header, titleFrame...)
 	tag = append(tag, artistFrame...)
