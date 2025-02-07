@@ -31,7 +31,8 @@ import (
 	"sync"
 	"time"
 
-	texttospeech "cloud.google.com/go/texttospeech/apiv1"
+	sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
+	// texttospeech "cloud.google.com/go/texttospeech/apiv1"
 	"github.com/KevinSJ/rss-to-podcast/internal/config"
 	"github.com/KevinSJ/rss-to-podcast/internal/pkg/rss"
 	"github.com/KevinSJ/rss-to-podcast/internal/pkg/worker"
@@ -43,7 +44,7 @@ import (
 const FEED_RETRY_CNT = 5
 
 func main() {
-    logger := log.New(os.Stdout, "[info] ", log.Ldate | log.Ltime)
+	logger := log.New(os.Stdout, "[info] ", log.Ldate|log.Ltime)
 
 	defer logger.Printf("Done processing all feeds")
 	configFile := flag.String("c", "./config.yaml", "config file of rss-to-speech")
@@ -59,15 +60,60 @@ func main() {
 	g := new(errgroup.Group)
 	ctx := context.Background()
 
-	client, err := texttospeech.NewClient(ctx)
+	// client, err := texttospeech.NewClient(ctx)
+	ttsConfigZh := sherpa.OfflineTtsConfig{
+		Model: sherpa.OfflineTtsModelConfig{
+			Vits: sherpa.OfflineTtsVitsModelConfig{
+				Model:       "./vits-melo-tts-zh_en/model.onnx",
+				Lexicon:     "./vits-melo-tts-zh_en/lexicon.txt",
+				Tokens:      "./vits-melo-tts-zh_en/tokens.txt",
+				DataDir:     "",
+				NoiseScale:  0.10,
+				NoiseScaleW: 0.80,
+				LengthScale: 3,
+				DictDir:     "./vits-melo-tts-zh_en/dict",
+			},
+			NumThreads: 4,
+			Provider:   "cpu",
+		},
+		RuleFsts:        "./matcha-icefall-zh-baker/phone.fst,./matcha-icefall-zh-baker/date.fst,./matcha-icefall-zh-baker/number.fst",
+		RuleFars:        "",
+		MaxNumSentences: 5,
+	}
+	offlineClientZh := sherpa.NewOfflineTts(&ttsConfigZh)
+	defer sherpa.DeleteOfflineTts(offlineClientZh)
+
+	ttsConfigEn := sherpa.OfflineTtsConfig{
+		Model: sherpa.OfflineTtsModelConfig{
+			Kokoro: sherpa.OfflineTtsKokoroModelConfig{
+				Model:       "./kokoro-en-v0_19/model.onnx",
+				Voices:      "./kokoro-en-v0_19/voices.bin",
+				Tokens:      "./kokoro-en-v0_19/tokens.txt",
+				DataDir:     "./kokoro-en-v0_19/espeak-ng-data",
+				LengthScale: 1.0,
+			},
+			NumThreads: 4,
+			Provider:   "cpu",
+		},
+		RuleFsts:        "",
+		RuleFars:        "",
+		MaxNumSentences: 5,
+	}
+	offlineClientEn := sherpa.NewOfflineTts(&ttsConfigEn)
+	defer sherpa.DeleteOfflineTts(offlineClientEn)
+
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Close()
+	// defer client.Close()
 
 	var wg sync.WaitGroup
 
-	workerGroup := worker.NewWorkerGroup(config, &wg, client, ctx)
+	workerGroup := worker.NewWorkerGroupOffline(config, &wg, worker.OfflineClient{
+		Zh: offlineClientZh,
+		En: offlineClientEn,
+	}, ctx)
+	// workerGroup := worker.NewWorkerGroup(config, &wg, client, ctx)
 
 	for _, _v := range config.Feeds {
 		v := _v
@@ -75,10 +121,10 @@ func main() {
 			logger.Printf("feed: %v\n", v)
 			feed := getFeedWithRetry(fp, v)
 
-            if feed == nil {
+			if feed == nil {
 				logger.Printf("Fail to fetch feed: %v \n", v)
-                return nil
-            }
+				return nil
+			}
 
 			hasValidItems := slices.IndexFunc(feed.Items, func(item *gofeed.Item) bool {
 				return time.Since(item.PublishedParsed.Local()).Hours() <= config.ItemSince
@@ -94,7 +140,7 @@ func main() {
 			dir, err := rss.CreateDirectory(*feed)
 			if err != nil {
 				logger.Printf("error: %v", err)
-                return err
+				return err
 			}
 
 			workerGroup.CreateSpeechFromItems(feed, dir)
