@@ -2,6 +2,8 @@ package worker
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"log"
 	"math"
 	"os"
@@ -15,7 +17,6 @@ import (
 	"github.com/KevinSJ/rss-to-podcast/internal/config"
 	"github.com/KevinSJ/rss-to-podcast/internal/pkg/rss"
 	"github.com/mmcdole/gofeed"
-	u "github.com/google/uuid"
 )
 
 const SPEECH_SYNTHESIZE_RETRY_CNT = 5
@@ -106,7 +107,12 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 		feedItem := workerItem.Item
 
 		log.Printf("Start procesing %v ", feedItem.Title)
-		fileName := workerItem.Directory + "/" + u.NewString()
+		hash := md5.New().Sum([]byte(feedItem.Title))
+		hashString := hex.EncodeToString(hash[:])
+		if hashSize := len(hashString); hashSize > 50 {
+			hashString = hashString[:50]
+		}
+		fileName := workerItem.Directory + "/" + hashString
 		filePath, _ := filepath.Abs(fileName + ".mp3")
 		metaFilePath, _ := filepath.Abs(fileName)
 		legacyFilePath, _ := filepath.Abs(strings.ReplaceAll(feedItem.Title, "/", "\\/") + ".mp3")
