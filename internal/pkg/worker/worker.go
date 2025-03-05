@@ -109,10 +109,10 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 
 		log.Printf("Start procesing %v ", feedItem.Title)
 		hash := md5.New().Sum([]byte(feedItem.Title))
-        hashString := hex.EncodeToString(hash[:])
-        if hashSize := len(hashString); hashSize > 50 {
-            hashString = hashString[:50]
-        }
+		hashString := hex.EncodeToString(hash[:])
+		if hashSize := len(hashString); hashSize > 50 {
+			hashString = hashString[:50]
+		}
 		filePath, _ := filepath.Abs(workerItem.Directory + "/" + hashString + ".mp3")
 		legacyFilePath, _ := filepath.Abs(strings.ReplaceAll(feedItem.Title, "/", "\\/") + ".mp3")
 

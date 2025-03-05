@@ -43,7 +43,7 @@ import (
 const FEED_RETRY_CNT = 5
 
 func main() {
-    logger := log.New(os.Stdout, "[info] ", log.Ldate | log.Ltime)
+	logger := log.New(os.Stdout, "[info] ", log.Ldate|log.Ltime)
 
 	defer logger.Printf("Done processing all feeds")
 	configFile := flag.String("c", "./config.yaml", "config file of rss-to-speech")
@@ -75,10 +75,10 @@ func main() {
 			logger.Printf("feed: %v\n", v)
 			feed := getFeedWithRetry(fp, v)
 
-            if feed == nil {
+			if feed == nil {
 				logger.Printf("Fail to fetch feed: %v \n", v)
-                return nil
-            }
+				return nil
+			}
 
 			hasValidItems := slices.IndexFunc(feed.Items, func(item *gofeed.Item) bool {
 				return time.Since(item.PublishedParsed.Local()).Hours() <= config.ItemSince
@@ -94,7 +94,7 @@ func main() {
 			dir, err := rss.CreateDirectory(*feed)
 			if err != nil {
 				logger.Printf("error: %v", err)
-                return err
+				return err
 			}
 
 			workerGroup.CreateSpeechFromItems(feed, dir)
