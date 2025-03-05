@@ -1,6 +1,7 @@
 package rss
 
 import (
+	"html"
 	"log"
 
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
@@ -22,9 +23,9 @@ func getSanitizedContentChunks(item *gofeed.Item) (textchunks []string) {
 	content := item.Title + "\n\n"
 
 	if len(item.Content) > 0 {
-		content += tool.StripHtmlTags(item.Content)
+		content += tool.StripHtmlTags(html.UnescapeString(item.Content))
 	} else if len(item.Description) > 0 {
-		content += tool.StripHtmlTags(item.Description)
+		content += tool.StripHtmlTags(html.UnescapeString(item.Description))
 	}
 
 	return tool.ChunksByte(content, 5000)

@@ -2,8 +2,6 @@ package worker
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"log"
 	"math"
 	"os"
@@ -16,8 +14,8 @@ import (
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 	"github.com/KevinSJ/rss-to-podcast/internal/config"
 	"github.com/KevinSJ/rss-to-podcast/internal/pkg/rss"
-	"github.com/KevinSJ/rss-to-podcast/internal/pkg/tool"
 	"github.com/mmcdole/gofeed"
+	u "github.com/google/uuid"
 )
 
 const SPEECH_SYNTHESIZE_RETRY_CNT = 5
@@ -108,13 +106,11 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 		feedItem := workerItem.Item
 
 		log.Printf("Start procesing %v ", feedItem.Title)
-		hash := md5.New().Sum([]byte(feedItem.Title))
-		hashString := hex.EncodeToString(hash[:])
-		if hashSize := len(hashString); hashSize > 50 {
-			hashString = hashString[:50]
-		}
-		filePath, _ := filepath.Abs(workerItem.Directory + "/" + hashString + ".mp3")
+		fileName := workerItem.Directory + "/" + u.NewString()
+		filePath, _ := filepath.Abs(fileName + ".mp3")
+		metaFilePath, _ := filepath.Abs(fileName)
 		legacyFilePath, _ := filepath.Abs(strings.ReplaceAll(feedItem.Title, "/", "\\/") + ".mp3")
+
 
 		if fileExistsAndLog(legacyFilePath) || fileExistsAndLog(filePath) {
 			continue
@@ -126,9 +122,11 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 		for _, ssr := range speechRequests {
 			var err error = nil
 			var resp *texttospeechpb.SynthesizeSpeechResponse = nil
-			for i := 0; i < SPEECH_SYNTHESIZE_RETRY_CNT; i++ {
+
+			for i := range SPEECH_SYNTHESIZE_RETRY_CNT {
 				if i > 0 {
-					log.Printf("Retry speech synthesize in 1 second due to error %v, count: %v", err, i)
+					log.Printf("While writing %v \n", feedItem.Title)
+					log.Printf("Retry speech synthesize in 1 second due to error %v, count: %v\n", err, i)
 					time.Sleep(time.Second)
 				}
 
@@ -148,12 +146,15 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 			}
 		}
 
-		if err := os.WriteFile(filePath, audioContent, 0o755); err != nil {
+		if err := os.WriteFile(metaFilePath, []byte("["+workerItem.Directory+"] "+feedItem.Title), 0o644); err != nil {
 			log.Printf("err writing synthesized file: %v\n", err)
 			return err
 		}
 
-		tool.WriteID3Tag(filePath, feedItem.Title, workerItem.Directory)
+		if err := os.WriteFile(filePath, audioContent, 0o644); err != nil {
+			log.Printf("err writing synthesized file: %v\n", err)
+			return err
+		}
 
 		fileTime := func(item *gofeed.Item) time.Time {
 			if item.UpdatedParsed != nil {
@@ -183,7 +184,7 @@ func NewWorkerGroup(config *config.Config, wg *sync.WaitGroup, client *texttospe
 	workerSize := int(math.Min(float64(config.ConcurrentWorkers), float64(channelSize)))
 	wg.Add(workerSize)
 
-	for i := 0; i < workerSize; i++ {
+	for range workerSize {
 		go processSpeechGeneration(wg, client, channel, ctx)
 	}
 
