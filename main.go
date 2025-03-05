@@ -110,17 +110,17 @@ func main() {
 	wg.Wait()
 }
 
-func getFeedWithRetry(fp *gofeed.Parser, v string) *gofeed.Feed {
+func getFeedWithRetry(fp *gofeed.Parser, feedUrl string) *gofeed.Feed {
 	var feed *gofeed.Feed = nil
 	var err error = nil
 
-	for i := 0; i < FEED_RETRY_CNT; i++ {
+	for i := range FEED_RETRY_CNT {
 		if i > 0 {
-			log.Printf("Retry due to Error GET: %v. \n", err)
+			log.Printf("Feed: %v, Retry due to Error GET: %v. \n", feedUrl, err)
 			time.Sleep(2000)
 		}
 
-		feed, err = fp.ParseURL(v)
+		feed, err = fp.ParseURL(feedUrl)
 		if err == nil && feed != nil {
 			return feed
 		}
