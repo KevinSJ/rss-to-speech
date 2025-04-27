@@ -114,7 +114,7 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 		}
 		fileName := workerItem.Directory + "/" + hashString
 		filePath, _ := filepath.Abs(fileName + ".mp3")
-		metaFilePath, _ := filepath.Abs(fileName)
+		metaFilePath, _ := filepath.Abs(fileName + ".meta")
 		legacyFilePath, _ := filepath.Abs(strings.ReplaceAll(feedItem.Title, "/", "\\/") + ".mp3")
 
 
