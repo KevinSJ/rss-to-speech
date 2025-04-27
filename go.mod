@@ -6,7 +6,6 @@ toolchain go1.24.0
 
 require (
 	cloud.google.com/go/texttospeech v1.11.0
-	github.com/google/uuid v1.6.0
 	github.com/mmcdole/gofeed v1.3.0
 	golang.org/x/exp v0.0.0-20250228200357-dead58393ab7
 	golang.org/x/sync v0.11.0
