@@ -1,0 +1,7 @@
+{
+    "coc.preferences.formatOnSave": true
+    "go.goplsOptions": {
+        "gofumpt": true
+        "staticcheck": true
+    }
+}
