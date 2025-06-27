@@ -23,7 +23,7 @@ builds:
       - darwin
 
 archives:
-  - format: binary
+  - formats: [binary]
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
       {{ .ProjectName }}_
@@ -33,18 +33,16 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-
+      - "^docs:"
+      - "^test:"
 # The lines beneath this are called `modelines`. See `:help modeline`
 # Feel free to remove those if you don't want/use them.
-# yaml-language-server: $schema=https://raw.githubusercontent.com/goreleaser/goreleaser/v2.3.0/www/docs/static/schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/goreleaser/goreleaser/v2.10.2/www/docs/static/schema.json
 # vim: set ts=2 sw=2 tw=0 fo=cnqoj
-#
