@@ -33,7 +33,7 @@ func GetSanitizedLanguageCode(s string) string {
 // returns the splited string by the size, chunkSize will be rounded to smallest
 // int divisble by the rune size
 func ChunksByte(s string, chunkSize int) []string {
-	if len(s) == 0 {
+	if len(s) == 0 || chunkSize <= 0 {
 		return nil
 	}
 

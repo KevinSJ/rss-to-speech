@@ -23,7 +23,7 @@ type Config struct {
 	// Whether to use natural voice from Google, this only have quota of 1
 	// Million, whereas the quota for standard voice is 3 Million
 	UseNaturalVoice bool `yaml:"UseNaturalVoice"`
-    // Speed of synthesized speech
+	// Speed of synthesized speech
 	SpeechSpeed float64 `yaml:"SpeechSpeed"`
 }
 
@@ -31,7 +31,7 @@ var DEFAULT_CONFIG = &Config{
 	ItemSince:         24.0,
 	ConcurrentWorkers: 5,
 	MaxItemPerFeed:    10,
-    SpeechSpeed: 1.25,
+	SpeechSpeed:       1.25,
 }
 
 func NewConfig(fileName string) (*Config, error) {

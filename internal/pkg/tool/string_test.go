@@ -46,7 +46,7 @@ func Test_chunksByte(t *testing.T) {
 			want: []string{"世"},
 		},
 		{
-			name: "should create chunked string (zh-CN)",
+			name: "should create chunked string (cmn-CN)",
 			args: args{
 				s: "世,界",
 				// each chinese char uses 3 byte
@@ -55,7 +55,7 @@ func Test_chunksByte(t *testing.T) {
 			want: []string{"世", ",", "界"},
 		},
 		{
-			name: "should create chunked string (zh-CN)",
+			name: "should create chunked string (cmn-CN)",
 			args: args{
 				s: "世界,",
 				// each chinese char uses 3 byte
@@ -72,7 +72,7 @@ func Test_chunksByte(t *testing.T) {
 			want: []string{"Hello", " worl", "d"},
 		},
 		{
-			name: "should not chunk string (zh-CN)",
+			name: "should not chunk string (cmn-CN)",
 			args: args{
 				s: "世界",
 				// each chinese char uses 3 byte
@@ -102,22 +102,22 @@ func TestGuessLanguageCode(t *testing.T) {
 		{
 			name: "return Chinese language code for Simplified Chinese",
 			args: args{s: "你好，世界"},
-			want: "zh-CN",
+			want: "cmn-CN",
 		},
 		{
 			name: "return Chinese language code for Tranditional Chinese",
 			args: args{s: "妳好，臥愛你"},
-			want: "zh-CN",
+			want: "cmn-CN",
 		},
 		{
 			name: "return Chinese language code for mixed letter and Chinese",
 			args: args{s: "abcdefg AS $,你好，世界"},
-			want: "zh-CN",
+			want: "cmn-CN",
 		},
 		{
 			name: "return Chinese language code for mixed letter and Chinese",
 			args: args{s: "1234,你好，世界"},
-			want: "zh-CN",
+			want: "cmn-CN",
 		},
 		{
 			name: "return English language code for English only",

@@ -117,7 +117,6 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 		metaFilePath, _ := filepath.Abs(fileName + ".meta")
 		legacyFilePath, _ := filepath.Abs(strings.ReplaceAll(feedItem.Title, "/", "\\/") + ".mp3")
 
-
 		if fileExistsAndLog(legacyFilePath) || fileExistsAndLog(filePath) {
 			continue
 		}
