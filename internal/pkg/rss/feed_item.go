@@ -20,7 +20,7 @@ var VOICE_NAME_MAP_STANDARD = map[string]string{
 }
 
 func getSanitizedContentChunks(item *gofeed.Item) (textchunks []string) {
-	content := item.Title + "\n\n"
+	content := html.UnescapeString(item.Title) + "\n\n"
 
 	if len(item.Content) > 0 {
 		content += tool.StripHtmlTags(html.UnescapeString(item.Content))
