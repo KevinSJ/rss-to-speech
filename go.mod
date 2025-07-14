@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/texttospeech v1.13.0
 	github.com/mmcdole/gofeed v1.3.0
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
-	golang.org/x/sync v0.15.0
+	golang.org/x/sync v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
