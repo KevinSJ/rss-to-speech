@@ -1,14 +1,12 @@
 module github.com/KevinSJ/rss-to-podcast
 
-go 1.23.0
-
-toolchain go1.24.0
+go 1.24.0
 
 require (
 	cloud.google.com/go/texttospeech v1.14.0
 	github.com/mmcdole/gofeed v1.3.0
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
-	golang.org/x/sync v0.16.0
+	golang.org/x/sync v0.17.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
