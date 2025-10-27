@@ -3,7 +3,7 @@ module github.com/KevinSJ/rss-to-podcast
 go 1.24.0
 
 require (
-	cloud.google.com/go/texttospeech v1.15.0
+	cloud.google.com/go/texttospeech v1.16.0
 	github.com/mmcdole/gofeed v1.3.0
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
 	golang.org/x/sync v0.17.0
