@@ -34,9 +34,7 @@ func getSanitizedContentChunks(item *gofeed.Item) (textchunks []string) {
 func GetSynthesizeSpeechRequests(item *gofeed.Item, lang string, useNaturalVoice bool, speechSpeed float64) []*texttospeechpb.SynthesizeSpeechRequest {
 	contentChunks := getSanitizedContentChunks(item)
 
-	if len(lang) == 0 {
-		lang = tool.GuessLanguageByUnicode(item.Title)
-	}
+    lang = tool.GuessLanguageByUnicode(item.Title)
 
 	lang = tool.GetSanitizedLanguageCode(lang)
 
