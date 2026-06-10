@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"log"
 	"math"
 	"os"
@@ -14,7 +15,6 @@ import (
 	"unicode"
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
-	sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
 
 	"cloud.google.com/go/texttospeech/apiv1/texttospeechpb"
 	"github.com/KevinSJ/rss-to-podcast/internal/config"
@@ -51,8 +51,8 @@ type WorkerGroup struct {
 }
 
 type OfflineClient struct {
-	Zh *sherpa.OfflineTts
-	En *sherpa.OfflineTts
+	Client *tool.TextToSpeech
+	Style  *tool.Style
 }
 
 func (w *WorkerGroup) Close() {
@@ -135,21 +135,38 @@ func processSpeechGenerationOffline(wg *sync.WaitGroup, clients *OfflineClient, 
 			content += tool.StripHtmlTags(feedItem.Description)
 		}
 
-		client := *clients.En
+		client := *clients.Client
 		for _, c := range feedItem.Title {
 			if unicode.In(c, tool.CHINESE_UNICODE_RANGE...) {
 				// return "cmn-CN"
-				client = *clients.Zh
-				break
+				return errors.New("Unsupported")
 			}
 		}
 
-		audio := client.Generate(content, 1, 0.8)
+		var wav []float32
+		var duration []float32
 
-		ok := audio.Save(filePath)
-		if !ok {
-			log.Fatalf("Failed to write %s", filePath)
+		//audio := client.Generate(content, 1, 0.8)
+		w, d, err := client.Call(content, "en", clients.Style, 8, 1.25, 0.25)
+		if err != nil {
+			log.Printf("Error generating speech: %v\n", err)
+			os.Exit(1)
 		}
+		wav = w
+		duration = []float32{d}
+		var wavOut []float64
+
+		wavLen := int(float32(client.SampleRate) * duration[0])
+		wavOut = make([]float64, wavLen)
+		for j := 0; j < wavLen && j < len(wav); j++ {
+			wavOut[j] = float64(wav[j])
+		}
+
+		if err := tool.WriteWavFile(filePath, wavOut, client.SampleRate); err != nil {
+			log.Printf("Error writing wav file: %v\n", err)
+			continue
+		}
+		log.Printf("Saved: %s\n", filePath)
 
 		fileTime := func(item *gofeed.Item) time.Time {
 			if item.UpdatedParsed != nil {
@@ -198,7 +215,7 @@ func processSpeechGeneration(wg *sync.WaitGroup, client *texttospeech.Client, wo
 		for _, ssr := range speechRequests {
 			var err error = nil
 			var resp *texttospeechpb.SynthesizeSpeechResponse = nil
-			for i := 0; i < SPEECH_SYNTHESIZE_RETRY_CNT; i++ {
+			for i := range SPEECH_SYNTHESIZE_RETRY_CNT {
 				if i > 0 {
 					log.Printf("Retry speech synthesize in 1 second due to error %v, count: %v", err, i)
 					time.Sleep(time.Second)
@@ -255,7 +272,7 @@ func NewWorkerGroup(config *config.Config, wg *sync.WaitGroup, client *texttospe
 	workerSize := int(math.Min(float64(config.ConcurrentWorkers), float64(channelSize)))
 	wg.Add(workerSize)
 
-	for i := 0; i < workerSize; i++ {
+	for range workerSize {
 		go processSpeechGeneration(wg, client, channel, ctx)
 	}
 
@@ -274,7 +291,7 @@ func NewWorkerGroupOffline(config *config.Config, wg *sync.WaitGroup, clients Of
 	workerSize := int(math.Min(float64(config.ConcurrentWorkers), float64(channelSize)))
 	wg.Add(workerSize)
 
-	for i := 0; i < workerSize; i++ {
+	for range workerSize {
 		go processSpeechGenerationOffline(wg, &clients, channel)
 	}
 

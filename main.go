@@ -26,17 +26,20 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"sync"
 	"time"
 
-	sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
+	//sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
 	// texttospeech "cloud.google.com/go/texttospeech/apiv1"
 	"github.com/KevinSJ/rss-to-podcast/internal/config"
 	"github.com/KevinSJ/rss-to-podcast/internal/pkg/rss"
+	"github.com/KevinSJ/rss-to-podcast/internal/pkg/tool"
 	"github.com/KevinSJ/rss-to-podcast/internal/pkg/worker"
 	"github.com/mmcdole/gofeed"
+	ort "github.com/yalue/onnxruntime_go"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
@@ -60,47 +63,35 @@ func main() {
 	g := new(errgroup.Group)
 	ctx := context.Background()
 
-	// client, err := texttospeech.NewClient(ctx)
-	ttsConfigZh := sherpa.OfflineTtsConfig{
-		Model: sherpa.OfflineTtsModelConfig{
-			Vits: sherpa.OfflineTtsVitsModelConfig{
-				Model:       "./vits-melo-tts-zh_en/model.onnx",
-				Lexicon:     "./vits-melo-tts-zh_en/lexicon.txt",
-				Tokens:      "./vits-melo-tts-zh_en/tokens.txt",
-				DataDir:     "",
-				NoiseScale:  0.10,
-				NoiseScaleW: 0.80,
-				LengthScale: 3,
-				DictDir:     "./vits-melo-tts-zh_en/dict",
-			},
-			NumThreads: 4,
-			Provider:   "cpu",
-		},
-		RuleFsts:        "./matcha-icefall-zh-baker/phone.fst,./matcha-icefall-zh-baker/date.fst,./matcha-icefall-zh-baker/number.fst",
-		RuleFars:        "",
-		MaxNumSentences: 5,
+	if err := tool.InitializeONNXRuntime(); err != nil {
+		log.Printf("Error initializing ONNX Runtime: %v\n", err)
+		os.Exit(1)
 	}
-	offlineClientZh := sherpa.NewOfflineTts(&ttsConfigZh)
-	defer sherpa.DeleteOfflineTts(offlineClientZh)
 
-	ttsConfigEn := sherpa.OfflineTtsConfig{
-		Model: sherpa.OfflineTtsModelConfig{
-			Kokoro: sherpa.OfflineTtsKokoroModelConfig{
-				Model:       "./kokoro-en-v0_19/model.onnx",
-				Voices:      "./kokoro-en-v0_19/voices.bin",
-				Tokens:      "./kokoro-en-v0_19/tokens.txt",
-				DataDir:     "./kokoro-en-v0_19/espeak-ng-data",
-				LengthScale: 1.0,
-			},
-			NumThreads: 4,
-			Provider:   "cpu",
-		},
-		RuleFsts:        "",
-		RuleFars:        "",
-		MaxNumSentences: 5,
+	defer ort.DestroyEnvironment()
+
+	// --- 2. Load config --- //
+	cfg, err := tool.LoadCfgs("assets/onnx")
+	if err != nil {
+		log.Printf("Error loading config: %v\n", err)
+		os.Exit(1)
 	}
-	offlineClientEn := sherpa.NewOfflineTts(&ttsConfigEn)
-	defer sherpa.DeleteOfflineTts(offlineClientEn)
+
+	// --- 3. Load TTS components --- //
+	textToSpeech, err := tool.LoadTextToSpeech("assets/onnx", false, cfg)
+	if err != nil {
+		fmt.Printf("Error loading TTS components: %v\n", err)
+		os.Exit(1)
+	}
+	defer textToSpeech.Destroy()
+
+	// --- 4. Load voice styles --- //
+	style, err := tool.LoadVoiceStyle([]string{"assets/voice_styles/F3.json"}, true)
+	if err != nil {
+		fmt.Printf("Error loading voice styles: %v\n", err)
+		os.Exit(1)
+	}
+	defer style.Destroy()
 
 	if err != nil {
 		log.Fatal(err)
@@ -109,9 +100,11 @@ func main() {
 
 	var wg sync.WaitGroup
 
+	//offlineClientEn = sherpa
+
 	workerGroup := worker.NewWorkerGroupOffline(config, &wg, worker.OfflineClient{
-		Zh: offlineClientZh,
-		En: offlineClientEn,
+		Client: textToSpeech,
+		Style:  style,
 	}, ctx)
 	// workerGroup := worker.NewWorkerGroup(config, &wg, client, ctx)
 
@@ -160,7 +153,7 @@ func getFeedWithRetry(fp *gofeed.Parser, v string) *gofeed.Feed {
 	var feed *gofeed.Feed = nil
 	var err error = nil
 
-	for i := 0; i < FEED_RETRY_CNT; i++ {
+	for i := range FEED_RETRY_CNT {
 		if i > 0 {
 			log.Printf("Retry due to Error GET: %v. \n", err)
 			time.Sleep(2000)
