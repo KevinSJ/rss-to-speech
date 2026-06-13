@@ -6,7 +6,7 @@ toolchain go1.23.0
 
 require (
 	cloud.google.com/go/texttospeech v1.11.0
-	github.com/k2-fsa/sherpa-onnx-go v1.8.18
+	github.com/k2-fsa/sherpa-onnx-go v1.13.2
 	github.com/mmcdole/gofeed v1.3.0
 	golang.org/x/exp v0.0.0-20250207012021-f9890c6ad9f3
 	golang.org/x/sync v0.11.0
@@ -28,9 +28,9 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/k2-fsa/sherpa-onnx-go-linux v1.10.41 // indirect
-	github.com/k2-fsa/sherpa-onnx-go-macos v1.10.41 // indirect
-	github.com/k2-fsa/sherpa-onnx-go-windows v1.10.41 // indirect
+	github.com/k2-fsa/sherpa-onnx-go-linux v1.13.2 // indirect
+	github.com/k2-fsa/sherpa-onnx-go-macos v1.13.2 // indirect
+	github.com/k2-fsa/sherpa-onnx-go-windows v1.13.2 // indirect
 	github.com/mmcdole/goxpp v1.1.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

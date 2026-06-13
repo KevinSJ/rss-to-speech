@@ -31,6 +31,7 @@ import (
 	"sync"
 	"time"
 
+	//sherpa_onnx "github.com/k2-fsa/sherpa-onnx-go-linux"
 	sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
 	// texttospeech "cloud.google.com/go/texttospeech/apiv1"
 	"github.com/KevinSJ/rss-to-podcast/internal/config"
@@ -63,21 +64,32 @@ func main() {
 	// client, err := texttospeech.NewClient(ctx)
 	ttsConfigZh := sherpa.OfflineTtsConfig{
 		Model: sherpa.OfflineTtsModelConfig{
-			Vits: sherpa.OfflineTtsVitsModelConfig{
-				Model:       "./vits-melo-tts-zh_en/model.onnx",
-				Lexicon:     "./vits-melo-tts-zh_en/lexicon.txt",
-				Tokens:      "./vits-melo-tts-zh_en/tokens.txt",
-				DataDir:     "",
-				NoiseScale:  0.10,
-				NoiseScaleW: 0.80,
-				LengthScale: 3,
-				DictDir:     "./vits-melo-tts-zh_en/dict",
+			Kokoro: sherpa.OfflineTtsKokoroModelConfig{
+				Model:   "kokoro-multi-lang-v1_1/model.onnx",
+				Voices:  "kokoro-multi-lang-v1_1/voices.bin",
+				Tokens:  "kokoro-multi-lang-v1_1/tokens.txt",
+				DataDir: "kokoro-multi-lang-v1_1/espeak-ng-data",
+				Lexicon: "kokoro-multi-lang-v1_1/lexicon-us-en.txt,kokoro-multi-lang-v1_1/lexicon-zh.txt",
 			},
-			NumThreads: 4,
-			Provider:   "cpu",
+			/*
+			 *Vits: sherpa.OfflineTtsVitsModelConfig{
+			 *    Model:       "./vits-melo-tts-zh_en/model.onnx",
+			 *    Lexicon:     "./vits-melo-tts-zh_en/lexicon.txt",
+			 *    Tokens:      "./vits-melo-tts-zh_en/tokens.txt",
+			 *    DataDir:     "",
+			 *    NoiseScale:  0.10,
+			 *    NoiseScaleW: 0.80,
+			 *    LengthScale: 3,
+			 *    DictDir:     "./vits-melo-tts-zh_en/dict",
+			 *},
+			 */
+			NumThreads: 8,
+			Provider:   "cuda",
 		},
-		RuleFsts:        "./matcha-icefall-zh-baker/phone.fst,./matcha-icefall-zh-baker/date.fst,./matcha-icefall-zh-baker/number.fst",
-		RuleFars:        "",
+		/*
+		 *RuleFsts:        "./matcha-icefall-zh-baker/phone.fst,./matcha-icefall-zh-baker/date.fst,./matcha-icefall-zh-baker/number.fst",
+		 *RuleFars:        "",
+		 */
 		MaxNumSentences: 5,
 	}
 	offlineClientZh := sherpa.NewOfflineTts(&ttsConfigZh)
@@ -86,14 +98,15 @@ func main() {
 	ttsConfigEn := sherpa.OfflineTtsConfig{
 		Model: sherpa.OfflineTtsModelConfig{
 			Kokoro: sherpa.OfflineTtsKokoroModelConfig{
-				Model:       "./kokoro-en-v0_19/model.onnx",
-				Voices:      "./kokoro-en-v0_19/voices.bin",
-				Tokens:      "./kokoro-en-v0_19/tokens.txt",
-				DataDir:     "./kokoro-en-v0_19/espeak-ng-data",
+				Model:       "kokoro-multi-lang-v1_1/model.onnx",
+				Voices:      "kokoro-multi-lang-v1_1/voices.bin",
+				Tokens:      "kokoro-multi-lang-v1_1/tokens.txt",
+				DataDir:     "kokoro-multi-lang-v1_1/espeak-ng-data",
+				Lexicon:     "kokoro-multi-lang-v1_1/lexicon-us-en.txt,kokoro-multi-lang-v1_1/lexicon-zh.txt",
 				LengthScale: 1.0,
 			},
 			NumThreads: 4,
-			Provider:   "cpu",
+			Provider:   "cuda",
 		},
 		RuleFsts:        "",
 		RuleFars:        "",
